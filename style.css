@@ -1,0 +1,450 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+
+.main {
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(to top, rgba(0,0,0,0.5)50%,rgba(0,0,0,0.5)50%), url(IMG_3472.jpg);
+    background-position: top 25% center;
+    background-size: cover;
+    position: relative;
+    align-items: center;
+}
+
+.container {
+    position: absolute;
+    width: 1501px; /*1536px*/
+    height: 100vh;
+    /*background-color: #fff;*/
+    /*left: 10%;*/
+}
+
+.navbar {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /*background-color: rgb(194, 22, 22);*/
+}
+
+.navbar a {
+    text-decoration: none;
+}
+
+.logo {
+    color: #f2aa4cff;
+    font-family: Helvetica;
+    letter-spacing: normal;
+    font-size: 30px;
+    margin-left: 100px;
+}
+
+.navbar ul li {
+    list-style-type: none;
+    display: inline-block;
+    padding: 0px 35px;
+}
+
+.navbar ul li a {
+    color: #f2aa4cff;
+    font-family: Helvetica;
+    font-weight: light;
+}
+
+.navbar ul li a:hover {
+    color: #fff;
+    transition: 0.4s ease-in-out;
+}
+
+.navbar .User_login i {
+    color: #f2aa4cff;
+    font-size: 21px;
+    transition: 0.4s ease-in-out;
+    cursor: pointer;
+    margin-right: 100px;
+}
+
+.navbar .User_login i:hover {
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.new_release {
+    width: 300px;
+    height: 200px;
+    position: absolute;
+    margin-top: 290px;
+    left: 100px;
+}
+
+.new_release .loginpage {
+    width: 110px;
+    height: 30px;
+    border: solid 2px #f2aa4cff;
+    font-size: 13px;
+    font-style: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    position: absolute; 
+    padding-top: 5px;  
+    padding-left: 6.5px;
+    padding-bottom: 7px;  
+    padding-right: 7px; 
+    background: none;
+    color: #fff;
+    transition: .4s ease;
+    letter-spacing: 1px;
+    font-family: Helvetica;
+}
+
+.new_release .loginpage:hover {
+    border-color: rgb(204, 199, 199);
+    transform: scale(1.02);
+    color: #f2aa4cff;
+}
+
+.new_release h1 {
+    color: rgba(255, 255, 255, 0.918);
+    font-family: Helvetica;
+    font-size: 50px;
+    letter-spacing: 2px;
+}
+
+.new_release .par {
+    color: #f2aa4cff;
+    font-family: 'Tahoma';
+    letter-spacing: 1.2px;
+    line-height: 30px;
+    font-size: 20px;
+}
+
+#login_form {
+    display: none;
+}
+
+.form_box {
+    width: 380px;
+    height: 480px;
+    position: relative;
+    top: 200px;
+    overflow: hidden;
+    transition: 2s ease;
+    float: right;
+    right: 15px;
+}
+
+.button_box {
+    width: 220px;
+	margin: 7% 22%;
+	position: absolute;
+	box-shadow: 0 0 8px .1px rgba(242, 170, 76, 0.733);
+	border-radius: 30px;
+}
+
+.toggle_btn {
+	padding: 10px 30px;
+	cursor: pointer;
+	background: transparent;
+	border:0;
+	outline: none;
+	position: relative;
+    color: #fff;
+    font-size: 14px;
+    transition: .3s ease-in-out;
+}
+
+.toggle_btn:hover {
+    font-size: 14.8px;
+}
+
+#btn {
+    top: 0;
+    left: 0;
+    position: absolute;
+    width: 110px;
+    height: 100%;
+    background: #f2aa4cff;
+    border-radius: 30px;
+    transition: .5s;
+}
+
+.input_group_login {
+    top: 150px;
+    position: absolute;
+    width: 280px;
+    transition: .5s;
+}
+
+.input_group_register {
+    top: 100px;
+    position: absolute;
+    width: 280px;
+    transition: .5s;
+    left: 200px;
+}
+
+.input_field:focus {
+    outline: none;
+    background: none;
+}
+
+.input_field {
+    width: 100%;
+    padding: 10px 0;
+    margin: 5px 0;
+    border-left: 0;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 1px solid #999;
+    outline: none;
+    background: transparent;
+}
+
+.submit_btn {
+    width: 85%;
+    padding: 10px 30px;
+    cursor: pointer;
+    display: block;
+    margin: auto;
+    background: #f2aa4cff;
+    border: 0;
+    outline: none;
+    border-radius: 30px;
+    transition: 0.3s ease-in-out;
+}
+
+.submit_btn:hover {
+    color: #fff;
+}
+
+.check_box {
+    margin: 30px 10px 34px 0;
+}
+
+span {
+    color: rgb(190, 188, 188);
+}
+
+#login {
+    left: 50px;
+}
+
+#login input{
+    color: white;
+    font-size: 15px;
+}
+
+#register {
+    left: 450px;
+}
+
+#register input {
+    color: white;
+}
+
+.footer {
+    position: absolute;
+    width: 100%;
+    height: 40px;
+    bottom: 0;
+    display: flex;
+    align-items: center; 
+    justify-content: center;
+    text-align: center;
+    margin-left: 35px;
+}
+
+.footer .social_icon a i{
+    list-style: none;
+    text-decoration: none;
+    color: #f2aa4cff;
+    transition: 0.3s ease-in-out;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 20px;
+    transition: .4s ease-in-out;
+}
+
+.footer .social_icon a i:hover {
+    color: rgba(255, 255, 255, 0.795);
+    transform: scale(1.4);
+}
+
+.footer_bottom p {
+    color: rgb(190, 188, 188);
+    font-family: helvetica;
+    letter-spacing: 1.8px;
+    font-size: 12.5px;
+    font-weight: lighter;
+}
+
+.footer_bottom span {
+    color: #f2aa4cff;
+}
+
+.navbar .user_logout {
+    display: flex;
+    align-items: center;
+}
+
+.logout_icon i {
+    color: #f2aa4cff;
+    font-size: 21px;
+    transition: 0.4s ease-in-out;
+    cursor: pointer;
+    margin-right: 100px;
+}
+
+.logout_icon i:hover {
+    color: rgba(255, 255, 255, 0.795);
+}
+
+.user_logout_menu {
+    display: flex;
+    align-items: center;
+    width: 100px;
+    height: 25px;
+    position: absolute;
+    right: 94px;
+    top: 65px;
+    box-shadow: 0 0 8px .1px rgba(242, 170, 76, 0.733);
+    border-radius: 15px;
+    display: none;
+}
+
+.user_logout_menu_left {
+    position: absolute;
+    left: 0;
+    padding: 3.8px 8px;
+    padding-top: 4px;
+    background: #f2aa4cff;
+    border-top-left-radius: 15px;
+	border-bottom-left-radius: 15px;
+    
+}
+
+.user_logout_menu_left i {
+    color: #000;
+}
+
+.user_logout_menu_right {
+    position: absolute;
+    left: 42px;
+    padding-bottom: 2px;
+    font-family: helvetica;
+    font-size: 15px;
+}
+
+.user_logout_menu_right a {
+    text-decoration: none;
+    color: #f2aa4cff;
+    transition: .5s ease-in-out;
+}
+
+.user_logout_menu_right a:hover {
+    color: rgba(255, 255, 255, 0.912);
+}
+
+.user_logout_menu:before {
+    content: "";
+	position: absolute;
+	top: -20px;
+	right: 9px;
+	border: 7px solid;
+	border-color: transparent transparent rgba(190, 188, 188, 0.534) transparent;
+}
+
+.dd_main.active .user_logout_menu {
+    display: flex;
+}
+	
+
+
+
+
+/*
+.icon {
+    height: 75px;
+    width: 125.03px;
+}
+
+.icon a {
+    text-decoration: none;
+}
+
+.logo {
+    color: #f2aa4cff;
+    font-family: Helvetica;
+    letter-spacing: normal;
+    font-size: 30px;
+    position: absolute;
+    top: 2.3%;
+}
+
+.menu {
+    position: absolute;
+    height: 75px;
+    background-color: #fff;
+}
+/*
+        <script>
+           let $ = document
+           const image =  $.getElementById("cover") 
+           const title =  $.getElementById("title") 
+           const artist =  $.getElementById("artist") 
+           const music =  $.getElementById("audio") 
+           const currentTimeE1 =  $.getElementById("current_time") 
+           const durationE1 =  $.getElementById("duration") 
+           const progress =  $.getElementById("progress") 
+           const progressContainer =  $.getElementById("progress_container") 
+           const prevBtn =  $.getElementById("prev") 
+           const playBtn =  $.getElementById("play") 
+           const nextBtn =  $.getElementById("next") 
+           const background =  $.getElementById("background") 
+
+           const song = [
+                { path: "never_stop_mixdown.mp3", musicName: "Never Stop(feat. Chendy)", artist: "M.O ceol", cover: "Never_Stop.jpg"}
+           ]
+
+           let isLoading = false;
+           function playSong() {
+                isLoading = true;
+                playBtn.classList.replace("fa-play", "fa-pause");
+                playBtn.setAttribute("title", "pause");
+                music.play()
+           }
+
+           function pauseSong() {
+                isLoading = false;
+                playBtn.classList.replace("fa-pause", "fa-play");
+                playBtn.setAttribute("title", "play");
+                music.pause()
+           }
+
+           function playToggle() {
+                if (isLoading) {
+                    pauseSong()
+                } else {
+                    playSong()
+                }
+           }
+
+           function loadSongs(songs) {
+                title.innerHTML = song.musicName
+                artist.innerHTML = song.artist
+                music.src = song.path
+                changeCover(song.cover)
+           }
+
+           function chanfeCover(cover) {
+                image.classList.remove("active");
+                setTimeout(function() {
+                    image.src = cover
+                    image.classList.add("active");
+                }, 100)
+                background.src = cover
+           }
+        </script>
+        */
