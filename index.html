@@ -1,95 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>MOCEOL</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moceol</title>
     <link rel="stylesheet" href="style.css" />
-    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <script src="https://kit.fontawesome.com/20cee36f21.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <div class="main">
-        <div class="container">
-            <div class="navbar">
-                <a href="home.html"><h2 class="logo">M.O ceol</h2></a>
-                <ul>
-                    <li><a href="home.html">HOME</a></li>
-                    <li><a href="#">MUSIC</a></li>
-                    <li><a href="#">BIO</a></li>
-                    <li><a href="#">MEDIA</a></li>
-                    <li><a href="#">SHOP</a></li>
-                </ul>
-                <a class="User_login" onclick = "document.getElementById('login_form').style.display='block'"><i class="fa-solid fa-user"></i></a>
-            </div>
-            <div class="new_release">
-                <h1>NEW<br><span>SINGLE</span></h1>
-                <p class="par">Never Stop(feat. Chendy)</p>
-                <button class="loginpage" onclick = "document.getElementById('login_form').style.display='block'" style="width: auto;">STREAM NOW</button>
-            </div>
-            <div class="footer">
-                <div class="footer_bottom">
-                    <p>copyright &copy;2022 MOceol Entertainment. designed by <span class="designer">@moceol</span></p>
-                </div>
-                <div class="social_icon">
-                    <a class="instagram" href="#https://instagram.com/moceol"><i class="fa-brands fa-instagram"></i></a>
-                    <a class="tiktok" href="#https://www.tiktok.com/@moceol"><i class="fa-brands fa-tiktok"></i></a>  
-                    <a class="facebook" href="#https://facebook.com/moceol"><i class="fa-brands fa-facebook"></i></a>
-                    <a class="spotify" href="#https://open.spotify.com/artist/6PZJRn8YaOfF9bOyKyEhBY"><i class="fa-brands fa-spotify"></i></a>
-                    <a class="itunes" href="#https://music.apple.com/ng/artist/m-o-ceol/1586545283?app=itunes"><i class="fa-brands fa-itunes-note"></i></a>
-                    <a class="youtube" href="#https://youtube.com/channel/UCQrF2FjJFnb8xSgUfzUdeqg"><i class="fa-brands fa-youtube"></i></a>
-                    <a class="amazon" href="#https://amazon.com/dp/B09GNVND1B"><i class="fa-brands fa-amazon"></i></a> 
-                </div>
-            </div>
-            <div id="login_form" class="login_page">
-                <div class="form_box">
-                    <div class="button_box">
-                       <div id="btn"></div>
-                        <button type="button" onclick="login()" class="toggle_btn">Login</button>
-                        <button type="button" onclick="register()" class="toggle_btn">Register</button>
-                    </div>
-                    <form id="login" class="input_group_login">
-                        <input type="text" class="input_field" placeholder ="Email_Id" required>
-                        <input type="password" class="input_field" placeholder="Enter Password" required>
-                        <input type="checkbox" class="check_box"><span>Remember Password</span>
-                        <button type="submit" class="submit_btn">Log in</button>
-                    </form>
-                    <form id='register' class="input_group_register">
-                        <input type="text" class="input_field" placeholder="First Name" required>
-                        <input type="text" class="input_field" placeholder="Last Name" required>
-                        <input type="text" class="input_field" placeholder="Email_Id" required>
-                        <input type="password" class="input_field" placeholder="Enter Password" required>
-                        <input type="password" class="input_field" placeholder="Confirm Password" required>
-                        <input type="checkbox" class="check_box"><span>I agree to the terms and conditions</span>
-                        <button type="submit" class="submit_btn">Register</button>
-                    </form>
-                </div>
-            </div>
-            <script>
-                var x = document.getElementById('login')
-                var y = document.getElementById('register')
-                var z = document.getElementById('btn')
-                
-                function register() {
-                    x.style.left = '-400px';
-                    y.style.left = '50px';
-                    z.style.left = '110px';
-                }
-        
-                function login() {
-                    x.style.left = '50px';
-                    y.style.left = '450px';
-                    z.style.left = '0px';
-                }
-            </script>
-            <script>
-                var modal = document.getElementById('login_form');
-                window.onclick = function(event) {
-                    if (event.target == modal) {
-                        modal.style.display = "none";
-                    }
-                }
-            </script>
+    <section class="hero">
+        <header class="navbar">
+            <a href="index.html"><h2 class="logo">Moceol</h2></a>
+            <button class="hamburger" type="button" aria-label="Toggle menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">HOME</a></li>
+                <li><a href="music.html">MUSIC</a></li>
+                <li><a href="bio.html">BIO</a></li>
+                <li><a href="media.html">MEDIA</a></li>
+                <li><a href="shop.html">SHOP</a></li>
+                <li><a href="support.html">SUPPORT</a></li>
+            </ul>
+        </header>
+        <div class="hero-content">
+            <h1>NEW<br><span>SINGLE</span></h1>
+            <p class="par">Never Stop (feat. Chendy)</p>
+            <a class="btn" href="NEVER_STOP_SPOTIFY_LINK" target="_blank" rel="noopener noreferrer">STREAM NOW</a>
         </div>
-    </div>
+    </section>
+
+    <footer class="site-footer">
+        <div class="footer-bottom">
+            <p>copyright &copy;2022 Moceol Entertainment. designed by <span class="designer">@moceol</span></p>
+        </div>
+        <div class="social-icons">
+            <a class="instagram" href="https://instagram.com/moceol" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a class="tiktok" href="https://www.tiktok.com/@moceol" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+            <a class="x-twitter" href="X_LINK" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
+            <a class="facebook" href="https://facebook.com/moceol" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+            <a class="spotify" href="https://open.spotify.com/artist/6PZJRn8YaOfF9bOyKyEhBY" target="_blank" rel="noopener noreferrer" aria-label="Spotify"><i class="fa-brands fa-spotify"></i></a>
+            <a class="itunes" href="https://music.apple.com/ng/artist/m-o-ceol/1586545283?app=itunes" target="_blank" rel="noopener noreferrer" aria-label="Apple Music"><i class="fa-brands fa-itunes-note"></i></a>
+            <a class="youtube" href="https://youtube.com/channel/UCQrF2FjJFnb8xSgUfzUdeqg" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+            <a class="amazon" href="https://amazon.com/dp/B09GNVND1B" target="_blank" rel="noopener noreferrer" aria-label="Amazon Music"><i class="fa-brands fa-amazon"></i></a>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
 </body>
 </html>
-
