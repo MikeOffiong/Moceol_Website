@@ -223,6 +223,12 @@ a {
     margin: 14px 0 20px;
 }
 
+.hero-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
 /* ============================================
    Footer (shared)
    ============================================ */
