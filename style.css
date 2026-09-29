@@ -3,8 +3,10 @@
    ============================================ */
 
 :root {
-    --color-amber: #f2aa4c;
-    --color-black: #000000;
+    --color-teal: #003f42;       /* base/background — sampled from photo-1's wall */
+    --color-teal-rgb: 0, 63, 66; /* same colour, components, for rgba() overlays */
+    --color-amber: #f2aa4c;      /* accent — nav links, buttons, heading accents */
+    --color-ink: #000000;        /* dark text on amber (e.g. solid buttons) */
     --color-white: #ffffff;
     --color-white-soft: rgba(255, 255, 255, 0.92);
     --color-grey: rgb(190, 188, 188);
@@ -27,7 +29,7 @@ html {
 }
 
 body {
-    background: var(--color-black);
+    background: var(--color-teal);
     color: var(--color-white);
     font-family: var(--font-heading);
 }
@@ -145,7 +147,7 @@ a {
         align-items: stretch;
         text-align: center;
         gap: 0;
-        background: rgba(0, 0, 0, 0.96);
+        background: rgba(var(--color-teal-rgb), 0.97);
         border-top: 1px solid rgba(242, 170, 76, 0.25);
         max-height: 0;
         overflow: hidden;
@@ -185,6 +187,20 @@ a {
     transform: scale(1.02);
 }
 
+.btn-solid {
+    background: var(--color-amber);
+    border-color: var(--color-amber);
+    color: var(--color-ink);
+    font-weight: bold;
+}
+
+.btn-solid:hover {
+    background: var(--color-white);
+    border-color: var(--color-white);
+    color: var(--color-ink);
+    transform: scale(1.02);
+}
+
 /* ============================================
    Hero (index.html)
    ============================================ */
@@ -194,9 +210,18 @@ a {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0.5) 50%), url("images/photo-1-web.jpg");
-    background-position: top 25% center;
+    background-image: linear-gradient(to top right, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.32) 22%, rgba(0, 0, 0, 0) 50%),
+        url("images/photo-1-hero-2400.jpg");
+    background-position: top center;
     background-size: cover;
+    background-repeat: no-repeat;
+}
+
+@media (max-width: 768px) {
+    .hero {
+        background-image: linear-gradient(to top right, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.32) 22%, rgba(0, 0, 0, 0) 50%),
+            url("images/photo-1-hero-1200.jpg");
+    }
 }
 
 .hero-content {
