@@ -101,14 +101,11 @@ a {
 
 .hamburger {
     display: none;
-    flex-direction: column;
-    justify-content: center;
-    gap: 5px;
     width: 32px;
     height: 32px;
     background: none;
     border: 0;
-    padding: 4px;
+    padding: 8px 4px;
     cursor: pointer;
     z-index: 40;
 }
@@ -119,6 +116,10 @@ a {
     height: 2px;
     background: var(--color-amber);
     transition: 0.3s ease;
+}
+
+.hamburger span + span {
+    margin-top: 5px;
 }
 
 .hamburger.open span:nth-child(1) {
@@ -135,7 +136,7 @@ a {
 
 @media (max-width: 768px) {
     .hamburger {
-        display: flex;
+        display: block;
     }
 
     .nav-links {
@@ -516,6 +517,11 @@ a {
     font-family: var(--font-body);
     font-size: 15px;
     line-height: 1.7;
+    margin-bottom: 18px;
+}
+
+.placeholder-section p:last-child {
+    margin-bottom: 0;
 }
 
 /* ============================================
