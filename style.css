@@ -213,7 +213,7 @@ a {
     flex-direction: column;
     background-image: linear-gradient(to top right, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.32) 22%, rgba(0, 0, 0, 0) 50%),
         url("images/photo-1-hero-2400.jpg");
-    background-position: top center;
+    background-position: center 15%;
     background-size: cover;
     background-repeat: no-repeat;
 }
@@ -228,7 +228,7 @@ a {
 .hero-content {
     margin-top: auto;
     margin-bottom: 12vh;
-    padding: 0 5%;
+    padding: 0 clamp(20px, 5vw, 40px);
     max-width: 460px;
 }
 
