@@ -2,6 +2,11 @@
 // Handles the responsive navbar hamburger menu on every page.
 
 document.addEventListener("DOMContentLoaded", function () {
+    var yearEl = document.getElementById("copyright-year");
+    if (yearEl) {
+        yearEl.textContent = new Date().getFullYear();
+    }
+
     var hamburger = document.querySelector(".hamburger");
     var navLinks = document.querySelector(".nav-links");
 
