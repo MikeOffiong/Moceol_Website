@@ -135,6 +135,19 @@ a {
 }
 
 @media (max-width: 768px) {
+    .navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: var(--color-teal);
+        border-bottom: 1px solid rgba(242, 170, 76, 0.25);
+    }
+
+    .hero .navbar {
+        background: transparent;
+    }
+
     .hamburger {
         display: block;
     }
@@ -313,6 +326,13 @@ a {
     margin: 0 auto;
     padding: 40px 5% 60px;
     min-height: calc(100vh - var(--nav-height));
+}
+
+@media (max-width: 768px) {
+    .page-main {
+        padding-top: calc(40px + var(--nav-height) + 1px);
+        min-height: 100vh;
+    }
 }
 
 .page-header {
@@ -601,6 +621,12 @@ a {
     margin: 0 auto;
     padding: 48px 5% 60px;
     text-align: center;
+}
+
+@media (max-width: 768px) {
+    .listen-main {
+        padding-top: calc(48px + var(--nav-height) + 1px);
+    }
 }
 
 .listen-cover {
