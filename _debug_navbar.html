@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<style>html,body{margin:0;padding:0;background:#222;overflow:hidden;}iframe{display:block;border:0;}#wrap{transform-origin:top left;}</style>
+</head>
+<body>
+<div id="wrap">
+<script>
+    var params = new URLSearchParams(location.search);
+    var src = params.get('src');
+    var w = parseInt(params.get('w'), 10) || 390;
+    var h = parseInt(params.get('h'), 10) || 844;
+    var wrap = document.getElementById('wrap');
+    var f = document.createElement('iframe');
+    f.src = src + (src.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
+    f.addEventListener('load', function busted() {
+        f.removeEventListener('load', busted);
+        try {
+            var links = f.contentDocument.querySelectorAll('link[rel="stylesheet"]');
+            links.forEach(function (l) {
+                if (l.href.indexOf('_=') === -1) {
+                    l.href = l.href.split('?')[0] + '?_=' + Date.now();
+                }
+            });
+        } catch (e) {}
+    });
+    f.style.width = w + 'px';
+    f.style.height = h + 'px';
+    wrap.appendChild(f);
+
+    function fit() {
+        var scale = Math.min(1, window.innerWidth / w, window.innerHeight / h);
+        wrap.style.transform = 'scale(' + scale + ')';
+        document.body.style.width = (w * scale) + 'px';
+        document.body.style.height = (h * scale) + 'px';
+    }
+    fit();
+    window.addEventListener('resize', fit);
+</script>
+</div>
+</body>
+</html>
