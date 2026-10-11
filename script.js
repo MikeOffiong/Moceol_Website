@@ -13,14 +13,13 @@ var FOOTER_SOCIAL_LINKS = [
     { cls: "amazon", href: "https://music.amazon.com/artists/B0D64K6NCP/moceol", icon: "fa-brands fa-amazon", label: "Amazon Music" }
 ];
 
-// TIKTOK PIXEL GOES HERE — once the TikTok Pixel base snippet is pasted into
-// each page's <head>, this will pick up window.ttq automatically.
-window.moceolTikTok = {
-    trackClick: function (eventName, data) {
-        if (window.ttq && typeof window.ttq.track === "function") {
-            window.ttq.track(eventName, data);
-        }
-    }
+// TRACKING PIXELS GO HERE (TikTok, Meta, Google Ads, Snapchat, etc.) — once pixel
+// base snippets are pasted into each page's <head>, call their event methods here
+// (e.g. window.ttq.track(...), window.fbq('track', ...), gtag('event', ...),
+// window.snaptr('track', ...)). Every tracked click/button on the site calls this
+// one function, so adding a new platform never means touching the call sites below.
+window.moceolTracking = {
+    fireEvent: function (eventName, data) {}
 };
 
 function renderFooter() {
@@ -200,6 +199,10 @@ function initHero() {
         } else {
             ownBtn.style.display = "none";
         }
+        ownBtn.addEventListener("click", function () {
+            // FIRE PURCHASE-INTENT EVENT HERE (Own It button)
+            window.moceolTracking.fireEvent("InitiateCheckout", { release: featured.slug });
+        });
     }
 }
 
@@ -320,8 +323,8 @@ function initListenPage() {
             '<span class="platform-row-arrow">' + PLATFORM_ARROW_SVG + "</span>";
 
         row.addEventListener("click", function () {
-            // TIKTOK PIXEL GOES HERE — fires a click event per platform row once the pixel is installed
-            window.moceolTikTok.trackClick("ClickButton", { platform: key, release: release.slug || trackParam || "unknown" });
+            // FIRE VIEW/CLICK EVENT HERE (per platform button)
+            window.moceolTracking.fireEvent("ClickButton", { platform: key, release: release.slug || trackParam || "unknown" });
         });
 
         grid.appendChild(row);
@@ -368,6 +371,16 @@ function initShopGrid() {
         }
 
         grid.appendChild(card);
+
+        if (!product.comingSoon) {
+            var buyBtn = card.querySelector(".btn");
+            if (buyBtn) {
+                buyBtn.addEventListener("click", function () {
+                    // FIRE PURCHASE-INTENT EVENT HERE (Shop Buy button)
+                    window.moceolTracking.fireEvent("AddToCart", { product: product.title });
+                });
+            }
+        }
     });
 }
 
