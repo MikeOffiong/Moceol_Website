@@ -77,6 +77,67 @@ var PLATFORM_ORDER = [
     "amazonStore", "googleStore"
 ];
 
+var PLATFORM_ICON_SLUG = {
+    spotify: "spotify",
+    appleMusic: "applemusic",
+    itunes: "itunes",
+    youtube: "youtube",
+    youtubeMusic: "youtubemusic",
+    audiomack: "audiomack",
+    tidal: "tidal",
+    deezer: "deezer",
+    amazonMusic: "amazonmusic",
+    soundcloud: "soundcloud",
+    napster: "napster",
+    pandora: "pandora",
+    googleStore: "googleplay"
+};
+
+var PLATFORM_BRAND_COLOR = {
+    spotify: "#1ED760",
+    appleMusic: "#FA243C",
+    itunes: "#FB5BC5",
+    youtube: "#FF0000",
+    youtubeMusic: "#FF0000",
+    audiomack: "#FFA200",
+    tidal: "#000000",
+    deezer: "#A238FF",
+    amazonMusic: "#46C3D0",
+    soundcloud: "#FF5500",
+    napster: "#2259FF",
+    pandora: "#224099",
+    googleStore: "#414141"
+};
+
+var SIMPLE_ICONS_BASE = "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/";
+var brandIconCache = {};
+
+function fetchBrandIconSvg(key) {
+    var slug = PLATFORM_ICON_SLUG[key];
+    if (!slug) {
+        return Promise.resolve(null);
+    }
+    if (brandIconCache[slug]) {
+        return brandIconCache[slug];
+    }
+    var color = PLATFORM_BRAND_COLOR[key] || "#f2aa4c";
+    var promise = fetch(SIMPLE_ICONS_BASE + slug + ".svg")
+        .then(function (res) {
+            if (!res.ok) {
+                throw new Error("icon fetch failed");
+            }
+            return res.text();
+        })
+        .then(function (svgText) {
+            return svgText.replace("<svg ", '<svg fill="' + color + '" ');
+        })
+        .catch(function () {
+            return null;
+        });
+    brandIconCache[slug] = promise;
+    return promise;
+}
+
 function platformLabel(key) {
     if (PLATFORM_META[key]) {
         return PLATFORM_META[key];
@@ -94,11 +155,15 @@ function platformInitials(label) {
 
 function buildPlatformIconSvg(label) {
     var initials = platformInitials(label);
-    return '<svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">' +
+    return '<svg viewBox="0 0 40 40" width="24" height="24" aria-hidden="true">' +
         '<circle cx="20" cy="20" r="19" fill="none" stroke="currentColor" stroke-width="2"/>' +
         '<text x="20" y="25" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="currentColor">' + initials + "</text>" +
         "</svg>";
 }
+
+var PLATFORM_ARROW_SVG =
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>';
 
 function getSpotifyTrackId(url) {
     if (!url) {
@@ -158,9 +223,7 @@ function initTrackStreamButtons() {
         if (release) {
             btn.href = "listen.html?r=" + encodeURIComponent(release.slug);
         } else {
-            btn.href = "https://open.spotify.com/track/" + trackId;
-            btn.target = "_blank";
-            btn.rel = "noopener noreferrer";
+            btn.href = "listen.html?track=" + encodeURIComponent(trackId);
         }
 
         card.appendChild(btn);
@@ -176,8 +239,27 @@ function initListenPage() {
     var releases = getReleases();
     var params = new URLSearchParams(window.location.search);
     var slug = params.get("r");
-    var release = (slug && releases.find(function (r) { return r.slug === slug; })) || getFeaturedRelease();
+    var trackParam = params.get("track");
 
+    var release = (slug && releases.find(function (r) { return r.slug === slug; })) || null;
+
+    if (!release && trackParam) {
+        release = {
+            slug: null,
+            title: null,
+            coverUrl: null,
+            coverIsPlaceholder: true,
+            spotifyTrackUrl: "https://open.spotify.com/track/" + trackParam,
+            platforms: { spotify: "https://open.spotify.com/track/" + trackParam }
+        };
+    }
+
+    if (!release) {
+        release = getFeaturedRelease();
+    }
+
+    var bgEl = document.getElementById("listen-bg");
+    var coverWrap = document.getElementById("listen-cover-wrap");
     var coverEl = document.getElementById("listen-cover-img");
     var titleEl = document.getElementById("listen-title");
 
@@ -186,12 +268,29 @@ function initListenPage() {
         return;
     }
 
-    if (coverEl) {
-        coverEl.src = release.coverUrl;
-        coverEl.alt = release.title + " cover art";
+    if (bgEl) {
+        if (release.coverUrl && !release.coverIsPlaceholder) {
+            bgEl.style.backgroundImage =
+                "linear-gradient(rgba(0, 63, 66, .55), rgba(0, 63, 66, .72)), url('" + release.coverUrl + "')";
+        } else {
+            bgEl.style.backgroundImage = "none";
+        }
     }
+
+    if (release.coverUrl) {
+        if (coverWrap) {
+            coverWrap.style.display = "";
+        }
+        if (coverEl) {
+            coverEl.src = release.coverUrl;
+            coverEl.alt = (release.title || "Moceol") + " cover art";
+        }
+    } else if (coverWrap) {
+        coverWrap.style.display = "none";
+    }
+
     if (titleEl) {
-        titleEl.textContent = release.title;
+        titleEl.textContent = "Moceol" + (release.title ? " - " + release.title : "");
     }
 
     var platforms = release.platforms || {};
@@ -210,21 +309,31 @@ function initListenPage() {
         var url = platforms[key];
         var label = platformLabel(key);
 
-        var btn = document.createElement("a");
-        btn.className = "platform-btn";
-        btn.href = url;
-        btn.target = "_blank";
-        btn.rel = "noopener noreferrer";
-        btn.innerHTML =
-            '<span class="platform-icon">' + buildPlatformIconSvg(label) + "</span>" +
-            '<span class="platform-label">' + label + "</span>";
+        var row = document.createElement("a");
+        row.className = "platform-row";
+        row.href = url;
+        row.target = "_blank";
+        row.rel = "noopener noreferrer";
+        row.innerHTML =
+            '<span class="platform-row-icon">' + buildPlatformIconSvg(label) + "</span>" +
+            '<span class="platform-row-label">' + label + "</span>" +
+            '<span class="platform-row-arrow">' + PLATFORM_ARROW_SVG + "</span>";
 
-        btn.addEventListener("click", function () {
-            // TIKTOK PIXEL GOES HERE — fires a click event per platform button once the pixel is installed
-            window.moceolTikTok.trackClick("ClickButton", { platform: key, release: release.slug });
+        row.addEventListener("click", function () {
+            // TIKTOK PIXEL GOES HERE — fires a click event per platform row once the pixel is installed
+            window.moceolTikTok.trackClick("ClickButton", { platform: key, release: release.slug || trackParam || "unknown" });
         });
 
-        grid.appendChild(btn);
+        grid.appendChild(row);
+
+        fetchBrandIconSvg(key).then(function (svg) {
+            if (svg) {
+                var iconEl = row.querySelector(".platform-row-icon");
+                if (iconEl) {
+                    iconEl.innerHTML = svg;
+                }
+            }
+        });
     });
 }
 

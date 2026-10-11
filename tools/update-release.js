@@ -400,9 +400,11 @@ async function main() {
         }
 
         let coverUrl;
+        let coverIsPlaceholder;
         if (trackInfo.remoteCoverUrl) {
             console.log("Downloading cover art...");
             coverUrl = await downloadCover(trackInfo.remoteCoverUrl, slug);
+            coverIsPlaceholder = false;
         } else {
             console.log("No cover art available — generating a placeholder.");
             const svg = buildPlaceholderSvg(trackInfo.title);
@@ -410,6 +412,7 @@ async function main() {
             const filename = slug + "-cover.svg";
             fs.writeFileSync(path.join(IMAGES_DIR, filename), svg);
             coverUrl = "images/" + filename;
+            coverIsPlaceholder = true;
         }
 
         const releases = loadReleasesFile(DATA_FILE);
@@ -425,6 +428,7 @@ async function main() {
             slug,
             title: trackInfo.title,
             coverUrl,
+            coverIsPlaceholder,
             releaseDate: trackInfo.releaseDate,
             spotifyTrackUrl: trackInfo.spotifyTrackUrl,
             platforms: reviewed,
