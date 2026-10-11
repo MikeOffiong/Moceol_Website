@@ -140,7 +140,7 @@ a {
     }
 
     .nav-links {
-        position: fixed;
+        position: absolute;
         top: var(--nav-height);
         left: 0;
         right: 0;
