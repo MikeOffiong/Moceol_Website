@@ -203,25 +203,7 @@ async function getLatestSpotifyRelease(token) {
     };
 }
 
-async function getSpotifyTrackById(trackId, token) {
-    const res = await fetchWithTimeout(
-        `https://api.spotify.com/v1/tracks/${trackId}`,
-        { headers: { Authorization: "Bearer " + token } }
-    );
-    if (!res.ok) {
-        throw new Error("Spotify track request failed: " + res.status + " " + res.statusText);
-    }
-    const track = await res.json();
-
-    return {
-        title: track.name,
-        remoteCoverUrl: largestImageUrl(track.album && track.album.images),
-        releaseDate: (track.album && track.album.release_date) || null,
-        spotifyTrackUrl: "https://open.spotify.com/track/" + track.id
-    };
-}
-
-async function getOdesliLinks(spotifyTrackUrl, odesliApiKey) {
+async function fetchOdesliRaw(spotifyTrackUrl, odesliApiKey) {
     let url = "https://api.song.link/v1-alpha.1/links?url=" + encodeURIComponent(spotifyTrackUrl);
     if (odesliApiKey) {
         url += "&api_key=" + encodeURIComponent(odesliApiKey);
@@ -230,8 +212,8 @@ async function getOdesliLinks(spotifyTrackUrl, odesliApiKey) {
     try {
         res = await fetchWithTimeout(url, {}, 10000);
     } catch (err) {
-        console.log("Odesli lookup failed (" + err.message + "). You can add platform links manually.");
-        return {};
+        console.log("Odesli lookup failed (" + err.message + ").");
+        return null;
     }
     if (res.status === 429) {
         console.log("Odesli rate-limited the request. Waiting a moment and retrying once...");
@@ -239,25 +221,28 @@ async function getOdesliLinks(spotifyTrackUrl, odesliApiKey) {
         try {
             res = await fetchWithTimeout(url, {}, 10000);
         } catch (err) {
-            console.log("Retry failed (" + err.message + "). You can add platform links manually.");
-            return {};
+            console.log("Retry failed (" + err.message + ").");
+            return null;
         }
     }
     if (res.status === 401) {
         console.log("Odesli's free public API has been deprecated and now requires an API key.");
         console.log("Request one from developers@song.link, then add ODESLI_API_KEY=<key> to " + ENV_PATH + ".");
-        console.log("Continuing without automatic cross-platform links — add them manually below.");
-        return {};
+        return null;
     }
     if (!res.ok) {
-        console.log("Odesli lookup returned " + res.status + ". You can add platform links manually.");
-        return {};
+        console.log("Odesli lookup returned " + res.status + ".");
+        return null;
     }
     const json = await res.json();
     if (!json.pageUrl) {
-        console.log("Odesli found no match for this track. You can add platform links manually.");
-        return {};
+        console.log("Odesli found no match for this track.");
+        return null;
     }
+    return json;
+}
+
+function extractOdesliLinks(json) {
     const links = {};
     Object.keys(json.linksByPlatform || {}).forEach((key) => {
         const entry = json.linksByPlatform[key];
@@ -266,6 +251,29 @@ async function getOdesliLinks(spotifyTrackUrl, odesliApiKey) {
         }
     });
     return links;
+}
+
+async function getOdesliLinks(spotifyTrackUrl, odesliApiKey) {
+    const json = await fetchOdesliRaw(spotifyTrackUrl, odesliApiKey);
+    if (!json) {
+        console.log("You can add platform links manually.");
+        return {};
+    }
+    return extractOdesliLinks(json);
+}
+
+async function getOdesliData(spotifyTrackUrl, odesliApiKey) {
+    const json = await fetchOdesliRaw(spotifyTrackUrl, odesliApiKey);
+    if (!json) {
+        return null;
+    }
+    const primary = (json.entitiesByUniqueId && json.entitiesByUniqueId[json.entityUniqueId]) || null;
+    return {
+        title: (primary && primary.title) || null,
+        artist: (primary && primary.artistName) || null,
+        thumbnailUrl: (primary && primary.thumbnailUrl) || null,
+        links: extractOdesliLinks(json)
+    };
 }
 
 function loadReleasesFile(filePath) {
@@ -316,7 +324,7 @@ async function main() {
 
         let trackInfo = null;
         let env = {};
-        let token = null;
+        let prefetchedOdesliLinks = null;
 
         try {
             env = loadEnv(ENV_PATH);
@@ -324,45 +332,48 @@ async function main() {
                 throw new Error("SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET missing from " + ENV_PATH);
             }
             console.log("Checking Spotify for your latest release...");
-            token = await getSpotifyToken(env.SPOTIFY_CLIENT_ID, env.SPOTIFY_CLIENT_SECRET);
+            const token = await getSpotifyToken(env.SPOTIFY_CLIENT_ID, env.SPOTIFY_CLIENT_SECRET);
             trackInfo = await getLatestSpotifyRelease(token);
             console.log("Found: \"" + trackInfo.title + "\" (" + (trackInfo.releaseDate || "date unknown") + ")\n");
         } catch (err) {
             console.log("\nSpotify's artist catalog lookup didn't work (" + err.message + ").");
-            console.log("That endpoint needs extra access that's often blocked in Development Mode, but the");
-            console.log("single-track endpoint usually still works — paste the track and I'll try that.\n");
+            console.log("No Spotify API calls in this fallback — paste the track and I'll pull its title,");
+            console.log("artist and cover art straight from Odesli instead.\n");
 
             const pastedUrl = (await ask("Paste the Spotify track URL for the release: ")).trim();
             const trackId = parseSpotifyTrackId(pastedUrl);
+            const cleanTrackUrl = trackId ? "https://open.spotify.com/track/" + trackId : pastedUrl;
 
-            if (!token) {
-                console.log("No Spotify token to work with, so this one has to be manual.");
-            } else if (!trackId) {
-                console.log("Couldn't find a track ID in that URL, so this one has to be manual.");
-            } else {
-                try {
-                    trackInfo = await getSpotifyTrackById(trackId, token);
-                    console.log("Found: \"" + trackInfo.title + "\" (" + (trackInfo.releaseDate || "date unknown") + ")\n");
-                } catch (trackErr) {
-                    console.log("Spotify's track endpoint didn't work either (" + trackErr.message + ").");
-                }
+            console.log("\nLooking up the track on Odesli...");
+            const odesliData = await getOdesliData(cleanTrackUrl, env.ODESLI_API_KEY);
+
+            if (!odesliData || !odesliData.title) {
+                console.log("\nCouldn't resolve that track on Odesli, so there's no title or cover art to go on.");
+                console.log("Fix whatever's blocking Odesli above (usually ODESLI_API_KEY) and run this again.");
+                rl.close();
+                return;
             }
 
-            if (!trackInfo) {
-                console.log("Let's fill in the rest manually.\n");
-                const title = (await ask("Release title: ")).trim();
-                const releaseDateInput = (await ask("Release date, YYYY-MM-DD (optional, press Enter to skip): ")).trim();
-                trackInfo = {
-                    title,
-                    remoteCoverUrl: null,
-                    releaseDate: releaseDateInput || null,
-                    spotifyTrackUrl: pastedUrl
-                };
-            }
+            console.log("Found: \"" + odesliData.title + "\"" + (odesliData.artist ? " by " + odesliData.artist : "") + "\n");
+
+            const releaseDateInput = (await ask("Release date, YYYY-MM-DD (optional, press Enter to skip): ")).trim();
+
+            trackInfo = {
+                title: odesliData.title,
+                remoteCoverUrl: odesliData.thumbnailUrl,
+                releaseDate: releaseDateInput || null,
+                spotifyTrackUrl: cleanTrackUrl
+            };
+            prefetchedOdesliLinks = odesliData.links;
         }
 
-        console.log("Looking up other platforms via Odesli...");
-        const odesliLinks = await getOdesliLinks(trackInfo.spotifyTrackUrl, env.ODESLI_API_KEY);
+        let odesliLinks;
+        if (prefetchedOdesliLinks) {
+            odesliLinks = prefetchedOdesliLinks;
+        } else {
+            console.log("Looking up other platforms via Odesli...");
+            odesliLinks = await getOdesliLinks(trackInfo.spotifyTrackUrl, env.ODESLI_API_KEY);
+        }
 
         const reviewed = {};
         const otherKeys = Object.keys(odesliLinks).filter((k) => k !== "audiomack").sort();
@@ -521,6 +532,6 @@ module.exports = {
     parseSpotifyTrackId,
     getSpotifyToken,
     getLatestSpotifyRelease,
-    getSpotifyTrackById,
-    getOdesliLinks
+    getOdesliLinks,
+    getOdesliData
 };
