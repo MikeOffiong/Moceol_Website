@@ -6,8 +6,8 @@ window.RELEASES = [
     {
         "slug": "clarity-of-mind",
         "title": "Clarity of Mind",
-        "coverUrl": "images/clarity-of-mind-cover.svg",
-        "coverIsPlaceholder": true,
+        "coverUrl": "images/clarity-of-mind-og.jpg",
+        "coverIsPlaceholder": false,
         "releaseDate": null,
         "spotifyTrackUrl": "https://open.spotify.com/track/5XkBd2b1oHqADk7xTl8hev",
         "platforms": {
