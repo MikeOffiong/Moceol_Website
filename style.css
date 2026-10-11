@@ -141,16 +141,10 @@ a {
         left: 0;
         right: 0;
         background: var(--color-teal);
-        border-bottom: 1px solid rgba(242, 170, 76, 0.25);
     }
 
     .hero .navbar {
-        position: relative;
-        top: auto;
-        left: auto;
-        right: auto;
         background: transparent;
-        border-bottom: none;
     }
 
     .hamburger {
@@ -167,7 +161,6 @@ a {
         text-align: center;
         gap: 0;
         background: rgba(var(--color-teal-rgb), 0.97);
-        border-top: 1px solid rgba(242, 170, 76, 0.25);
         max-height: 0;
         overflow: hidden;
         transition: max-height 0.35s ease;
