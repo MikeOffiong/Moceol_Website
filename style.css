@@ -145,7 +145,12 @@ a {
     }
 
     .hero .navbar {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
         background: transparent;
+        border-bottom: none;
     }
 
     .hamburger {
