@@ -151,6 +151,14 @@ async function getSpotifyToken(clientId, clientSecret) {
     return json.access_token;
 }
 
+function parseSpotifyTrackId(url) {
+    if (!url) {
+        return null;
+    }
+    const match = String(url).match(/track[/:]([a-zA-Z0-9]+)/);
+    return match ? match[1] : null;
+}
+
 function largestImageUrl(images) {
     if (!images || !images.length) {
         return null;
@@ -192,6 +200,24 @@ async function getLatestSpotifyRelease(token) {
         remoteCoverUrl: largestImageUrl(latest.images),
         releaseDate: latest.release_date || null,
         spotifyTrackUrl: "https://open.spotify.com/track/" + firstTrack.id
+    };
+}
+
+async function getSpotifyTrackById(trackId, token) {
+    const res = await fetchWithTimeout(
+        `https://api.spotify.com/v1/tracks/${trackId}`,
+        { headers: { Authorization: "Bearer " + token } }
+    );
+    if (!res.ok) {
+        throw new Error("Spotify track request failed: " + res.status + " " + res.statusText);
+    }
+    const track = await res.json();
+
+    return {
+        title: track.name,
+        remoteCoverUrl: largestImageUrl(track.album && track.album.images),
+        releaseDate: (track.album && track.album.release_date) || null,
+        spotifyTrackUrl: "https://open.spotify.com/track/" + track.id
     };
 }
 
@@ -290,6 +316,7 @@ async function main() {
 
         let trackInfo = null;
         let env = {};
+        let token = null;
 
         try {
             env = loadEnv(ENV_PATH);
@@ -297,21 +324,41 @@ async function main() {
                 throw new Error("SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET missing from " + ENV_PATH);
             }
             console.log("Checking Spotify for your latest release...");
-            const token = await getSpotifyToken(env.SPOTIFY_CLIENT_ID, env.SPOTIFY_CLIENT_SECRET);
+            token = await getSpotifyToken(env.SPOTIFY_CLIENT_ID, env.SPOTIFY_CLIENT_SECRET);
             trackInfo = await getLatestSpotifyRelease(token);
             console.log("Found: \"" + trackInfo.title + "\" (" + (trackInfo.releaseDate || "date unknown") + ")\n");
         } catch (err) {
-            console.log("\nSpotify lookup didn't work (" + err.message + ").");
-            console.log("No problem — let's do this one manually.\n");
+            console.log("\nSpotify's artist catalog lookup didn't work (" + err.message + ").");
+            console.log("That endpoint needs extra access that's often blocked in Development Mode, but the");
+            console.log("single-track endpoint usually still works — paste the track and I'll try that.\n");
+
             const pastedUrl = (await ask("Paste the Spotify track URL for the release: ")).trim();
-            const title = (await ask("Release title: ")).trim();
-            const releaseDateInput = (await ask("Release date, YYYY-MM-DD (optional, press Enter to skip): ")).trim();
-            trackInfo = {
-                title,
-                remoteCoverUrl: null,
-                releaseDate: releaseDateInput || null,
-                spotifyTrackUrl: pastedUrl
-            };
+            const trackId = parseSpotifyTrackId(pastedUrl);
+
+            if (!token) {
+                console.log("No Spotify token to work with, so this one has to be manual.");
+            } else if (!trackId) {
+                console.log("Couldn't find a track ID in that URL, so this one has to be manual.");
+            } else {
+                try {
+                    trackInfo = await getSpotifyTrackById(trackId, token);
+                    console.log("Found: \"" + trackInfo.title + "\" (" + (trackInfo.releaseDate || "date unknown") + ")\n");
+                } catch (trackErr) {
+                    console.log("Spotify's track endpoint didn't work either (" + trackErr.message + ").");
+                }
+            }
+
+            if (!trackInfo) {
+                console.log("Let's fill in the rest manually.\n");
+                const title = (await ask("Release title: ")).trim();
+                const releaseDateInput = (await ask("Release date, YYYY-MM-DD (optional, press Enter to skip): ")).trim();
+                trackInfo = {
+                    title,
+                    remoteCoverUrl: null,
+                    releaseDate: releaseDateInput || null,
+                    spotifyTrackUrl: pastedUrl
+                };
+            }
         }
 
         console.log("Looking up other platforms via Odesli...");
@@ -471,7 +518,9 @@ module.exports = {
     serializeReleases,
     loadReleasesFile,
     platformLabel,
+    parseSpotifyTrackId,
     getSpotifyToken,
     getLatestSpotifyRelease,
+    getSpotifyTrackById,
     getOdesliLinks
 };
