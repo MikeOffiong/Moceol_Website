@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-label="Clarity of Mind cover art placeholder">
+  <rect width="800" height="800" fill="#003f42"/>
+  <rect x="28" y="28" width="744" height="744" fill="none" stroke="#f2aa4c" stroke-width="2"/>
+  <circle cx="400" cy="330" r="64" fill="none" stroke="#f2aa4c" stroke-width="3" opacity="0.85"/>
+  <path d="M378 304 L430 330 L378 356 Z" fill="#f2aa4c" opacity="0.85"/>
+  <text x="400" y="470" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="42" font-weight="bold" letter-spacing="2" fill="#f2aa4c">CLARITY</text>
+  <text x="400" y="520" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="42" font-weight="bold" letter-spacing="2" fill="#f2aa4c">OF MIND</text>
+  <text x="400" y="568" text-anchor="middle" font-family="Tahoma, Geneva, sans-serif" font-size="16" letter-spacing="3" fill="rgba(255,255,255,0.65)">COVER ART COMING SOON</text>
+</svg>

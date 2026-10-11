@@ -360,6 +360,13 @@ a {
     display: block;
 }
 
+.track-stream-btn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    text-align: center;
+}
+
 /* ============================================
    Shop page — product grid
    ============================================ */
@@ -437,6 +444,19 @@ a {
 .product-card .btn {
     align-self: flex-start;
     margin-top: 4px;
+}
+
+.product-card--soon {
+    opacity: 0.6;
+}
+
+.product-cover--empty {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.product-title--muted {
+    color: var(--color-grey);
+    font-style: italic;
 }
 
 /* ============================================
@@ -561,4 +581,85 @@ a {
     max-width: none;
     margin: 0;
     padding: 0;
+}
+
+/* ============================================
+   Listen page (smart landing page)
+   ============================================ */
+
+.listen-main {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 40px 5% 60px;
+    text-align: center;
+}
+
+.listen-cover {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto 24px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(242, 170, 76, 0.3);
+}
+
+.listen-cover img {
+    width: 100%;
+    display: block;
+}
+
+.listen-title {
+    color: var(--color-white-soft);
+    font-family: var(--font-heading);
+    font-size: clamp(24px, 5vw, 32px);
+    letter-spacing: 1px;
+    margin-bottom: 32px;
+}
+
+.platform-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    text-align: left;
+}
+
+.platform-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: solid 2px var(--color-amber);
+    border-radius: 10px;
+    padding: 12px 16px;
+    min-height: 48px;
+    text-decoration: none;
+    color: var(--color-white);
+    transition: 0.3s ease;
+}
+
+.platform-btn:hover {
+    border-color: var(--color-grey);
+    background: rgba(242, 170, 76, 0.08);
+    transform: scale(1.02);
+}
+
+.platform-icon {
+    flex: 0 0 auto;
+    display: flex;
+    color: var(--color-amber);
+}
+
+.platform-icon svg {
+    display: block;
+}
+
+.platform-label {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+.listen-empty {
+    color: var(--color-grey);
+    font-family: var(--font-body);
+    font-size: 14px;
 }
