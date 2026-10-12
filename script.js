@@ -321,8 +321,11 @@ function initListenPage() {
 
     // FIRE VIEW EVENT HERE (page load)
     window.moceolTracking.fireEvent("ViewContent", {
-        content_name: release.title || release.slug || trackParam || "Unknown",
-        release: release.slug || trackParam || "unknown"
+        release: release.slug || trackParam || "unknown",
+        contents: [{
+            content_id: release.slug || trackParam || "unknown",
+            content_name: release.title || release.slug || trackParam || "Unknown"
+        }]
     });
 
     var platforms = release.platforms || {};
