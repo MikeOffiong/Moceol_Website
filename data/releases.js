@@ -13,7 +13,7 @@ window.RELEASES = [
         "platforms": {
             "spotify": "https://open.spotify.com/track/5XkBd2b1oHqADk7xTl8hev"
         },
-        "gumroadUrl": "https://oetim.gumroad.com/l/eyurqz",
+        "gumroadUrl": "https://moceol.gumroad.com/l/eyurqz",
         "featured": true
     },
     {

@@ -8,7 +8,7 @@ window.PRODUCTS = [
         title: "Clarity of Mind",
         price: "$5",
         coverUrl: "images/clarity-of-mind-og.jpg",
-        link: "https://oetim.gumroad.com/l/eyurqz",
+        link: "https://moceol.gumroad.com/l/eyurqz",
         comingSoon: false
     },
     {
