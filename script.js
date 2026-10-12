@@ -13,14 +13,37 @@ var FOOTER_SOCIAL_LINKS = [
     { cls: "amazon", href: "https://music.amazon.com/artists/B0D64K6NCP/moceol", icon: "fa-brands fa-amazon", label: "Amazon Music" }
 ];
 
-// TRACKING PIXELS GO HERE (TikTok, Meta, Google Ads, Snapchat, etc.) — once pixel
-// base snippets are pasted into each page's <head>, call their event methods here
-// (e.g. window.ttq.track(...), window.fbq('track', ...), gtag('event', ...),
-// window.snaptr('track', ...)). Every tracked click/button on the site calls this
-// one function, so adding a new platform never means touching the call sites below.
+// TikTok Pixel is installed (see each page's <head>) and wired up below.
+// Add other platforms' event calls here too (e.g. window.fbq('track', ...),
+// gtag('event', ...), window.snaptr('track', ...)) — every tracked click/button
+// on the site calls this one function, so adding a new platform never means
+// touching the call sites below.
 window.moceolTracking = {
-    fireEvent: function (eventName, data) {}
+    fireEvent: function (eventName, data) {
+        if (window.ttq && typeof window.ttq.track === "function") {
+            window.ttq.track(eventName, data);
+        }
+    }
 };
+
+// Fires a tracking event, then follows the link. For same-tab links this
+// delays navigation briefly so the tracking request isn't cancelled by the
+// page unload; target="_blank" links aren't navigating this tab away at all,
+// so they fire and proceed immediately. Doesn't change where the link goes.
+function wireClickTracking(anchor, eventName, data) {
+    anchor.addEventListener("click", function (e) {
+        if (anchor.target === "_blank") {
+            window.moceolTracking.fireEvent(eventName, data);
+            return;
+        }
+        e.preventDefault();
+        window.moceolTracking.fireEvent(eventName, data);
+        var destination = anchor.href;
+        setTimeout(function () {
+            window.location.href = destination;
+        }, 300);
+    });
+}
 
 function renderFooter() {
     var footer = document.getElementById("site-footer");
@@ -191,6 +214,7 @@ function initHero() {
     }
     if (streamBtn) {
         streamBtn.href = "listen.html";
+        wireClickTracking(streamBtn, "ClickButton", { button: "stream_now", release: featured.slug });
     }
     if (ownBtn) {
         if (featured.gumroadUrl) {
@@ -199,10 +223,7 @@ function initHero() {
         } else {
             ownBtn.style.display = "none";
         }
-        ownBtn.addEventListener("click", function () {
-            // FIRE PURCHASE-INTENT EVENT HERE (Own It button)
-            window.moceolTracking.fireEvent("InitiateCheckout", { release: featured.slug });
-        });
+        wireClickTracking(ownBtn, "ClickButton", { button: "own_it", release: featured.slug });
     }
 }
 
@@ -228,6 +249,8 @@ function initTrackStreamButtons() {
         } else {
             btn.href = "listen.html?track=" + encodeURIComponent(trackId);
         }
+
+        wireClickTracking(btn, "ClickButton", { button: "stream_now", release: release ? release.slug : trackId });
 
         card.appendChild(btn);
     });
@@ -296,6 +319,12 @@ function initListenPage() {
         titleEl.textContent = "Moceol" + (release.title ? " - " + release.title : "");
     }
 
+    // FIRE VIEW EVENT HERE (page load)
+    window.moceolTracking.fireEvent("ViewContent", {
+        content_name: release.title || release.slug || trackParam || "Unknown",
+        release: release.slug || trackParam || "unknown"
+    });
+
     var platforms = release.platforms || {};
     var keys = Object.keys(platforms).filter(function (k) { return !!platforms[k]; });
 
@@ -323,7 +352,7 @@ function initListenPage() {
             '<span class="platform-row-arrow">' + PLATFORM_ARROW_SVG + "</span>";
 
         row.addEventListener("click", function () {
-            // FIRE VIEW/CLICK EVENT HERE (per platform button)
+            // Opens in a new tab, so this tab never unloads - no navigation-timing concern here.
             window.moceolTracking.fireEvent("ClickButton", { platform: key, release: release.slug || trackParam || "unknown" });
         });
 
