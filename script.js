@@ -93,8 +93,8 @@ var PLATFORM_META = {
 };
 
 var PLATFORM_ORDER = [
-    "spotify", "appleMusic", "youtubeMusic", "youtube", "amazonMusic",
-    "boomplay", "audiomack", "tidal", "deezer", "soundcloud",
+    "spotify", "appleMusic", "youtubeMusic", "audiomack", "youtube",
+    "amazonMusic", "boomplay", "tidal", "deezer", "soundcloud",
     "itunes", "pandora", "anghami", "yandex", "napster",
     "amazonStore", "googleStore"
 ];
