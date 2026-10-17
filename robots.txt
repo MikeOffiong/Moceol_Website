@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /vip-e5qmxs8nopdifav7.html
+
+Sitemap: https://moceol.com/sitemap.xml
