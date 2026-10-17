@@ -648,7 +648,15 @@ a {
     font-weight: bold;
     font-size: clamp(22px, 5vw, 30px);
     letter-spacing: 0.5px;
-    margin-bottom: 32px;
+    margin-bottom: 10px;
+}
+
+.listen-cta {
+    color: var(--color-grey);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 28px;
 }
 
 .platform-grid {
