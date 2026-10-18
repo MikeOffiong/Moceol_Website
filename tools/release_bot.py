@@ -20,6 +20,12 @@ search link rather than a direct track link), and Approve/Reject buttons.
 
 Built so ARTISTS can grow to more than one Spotify account later; only the
 "moceol_website" site_target has an actual publish implementation so far.
+
+Also answers artist-facing support questions in DM (see "ARTIST FAQ /
+SUPPORT" below). Only reachable via the one deep link in Moceol Suite's
+/help - everyone else gets silence. Every FAQ hit and forwarded question
+gets logged to OWNER_USER_ID so there's a running record of what clients
+are actually asking about.
 """
 
 import base64
@@ -99,6 +105,10 @@ def load_state():
         "last_update_id": 0,
         "last_daily_check_date": None,  # ISO date (UTC); gates the once-a-day run
         "artists": {},
+        "authorized_users": {},  # user_id (str) -> {name, username, authorized_at}; only
+                                  # these users get a response - see handle_artist_message
+        "awaiting_catchall": {},  # user_id (str) -> True while waiting for their free-text
+                                  # question after tapping "Something else"
     }
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE) as f:
@@ -309,7 +319,7 @@ def get_telegram_updates(offset):
             params={
                 "timeout": 0,
                 "offset": offset or None,
-                "allowed_updates": json.dumps(["callback_query"]),
+                "allowed_updates": json.dumps(["callback_query", "message"]),
             },
             timeout=10,
         )
@@ -318,6 +328,215 @@ def get_telegram_updates(offset):
     except Exception as e:
         log.error("Telegram getUpdates failed: %s", e)
         return []
+
+
+# ---------------------------------------------------------------------------
+# ARTIST FAQ / SUPPORT
+# ---------------------------------------------------------------------------
+# This bot is only reachable through the one deep link in Moceol Suite's
+# /help ("are you an artist? need help with your releases?" ->
+# t.me/moceol_releases_bot?start=suite). Anyone who hasn't come through that
+# exact /start payload gets no response at all - not an error, not a hint
+# that the bot exists, nothing - so it stays invisible to anyone who finds
+# the username some other way. See handle_artist_message().
+RELEASES_WELCOME_TEXT = (
+    "<b>Hey, welcome!</b>\n\n"
+    "This is the Moceol Releases support chat. Pick what you need below, or "
+    "just type your question."
+)
+
+FAQ_RELEASE_DELAY_TEXT = (
+    "<b>My release hasn't gone live yet</b>\n\n"
+    "Totally normal - distributors and streaming platforms can take anywhere "
+    "from a few hours to a few days to fully roll a release out, even after "
+    "it's been approved. If it's been longer than that, let us know and we'll "
+    "look into it."
+)
+
+FAQ_STREAMING_LINKS_TEXT = (
+    "<b>Do I need to update my streaming links myself?</b>\n\n"
+    "No - once a release is live, your streaming links update automatically. "
+    "There's nothing you need to do on your end."
+)
+
+FAQ_ANALYTICS_TEXT = (
+    "<b>How do I get my analytics / reports?</b>\n\n"
+    "Reporting depends on your plan - some plans get a recurring report, "
+    "others get it on request. Reach out any time if you're unsure what's "
+    "included for you."
+)
+
+FAQ_EDITS_TEXT = (
+    "<b>Can I update my bio, photos, or other content after launch?</b>\n\n"
+    "Of course - just reach out and tell us what you'd like changed, and "
+    "we'll take it from there."
+)
+
+FAQ_UPGRADE_TEXT = (
+    "<b>Can I upgrade from a landing page to a full website?</b>\n\n"
+    "Definitely - that's something we can talk through whenever you're "
+    "ready. Just reach out and we'll figure out what makes sense for you."
+)
+
+FAQ_SITE_DOWN_TEXT = (
+    "<b>My site or page seems to be down</b>\n\n"
+    "Sorry about that - this gets flagged urgently, and you'll hear back "
+    "within one hour."
+)
+
+FAQ_DETECTION_TEXT = (
+    "<b>Will my release get picked up no matter where I distribute?</b>\n\n"
+    "Yes - detection isn't tied to any one distributor. As long as your "
+    "release reaches Spotify, it'll be picked up."
+)
+
+CATCHALL_PROMPT_TEXT = "Type your question and we'll get back to you."
+
+# callback_data -> (label used in the owner-facing log line, answer text)
+FAQ_LOOKUP = {
+    "faq_delay": ("release delay", FAQ_RELEASE_DELAY_TEXT),
+    "faq_streaming": ("streaming links auto-update", FAQ_STREAMING_LINKS_TEXT),
+    "faq_analytics": ("analytics / reporting", FAQ_ANALYTICS_TEXT),
+    "faq_edits": ("content edit request", FAQ_EDITS_TEXT),
+    "faq_upgrade": ("landing page -> website upgrade", FAQ_UPGRADE_TEXT),
+    "faq_sitedown": ("site down", FAQ_SITE_DOWN_TEXT),
+    "faq_detection": ("release detection / distributor", FAQ_DETECTION_TEXT),
+}
+
+
+def build_faq_keyboard():
+    return {
+        "inline_keyboard": [
+            [{"text": "My release hasn't gone live yet", "callback_data": "faq_delay"}],
+            [{"text": "Do streaming links update on their own?", "callback_data": "faq_streaming"}],
+            [{"text": "How do I get my analytics?", "callback_data": "faq_analytics"}],
+            [{"text": "Can I update my bio / photos / content?", "callback_data": "faq_edits"}],
+            [{"text": "Can I upgrade to a full website?", "callback_data": "faq_upgrade"}],
+            [{"text": "My site or page is down", "callback_data": "faq_sitedown"}],
+            [{"text": "Does detection work with any distributor?", "callback_data": "faq_detection"}],
+            [{"text": "Something else", "callback_data": "faq_other"}],
+        ]
+    }
+
+
+def _who(from_user):
+    username = from_user.get("username")
+    if username:
+        return f"@{username}"
+    return from_user.get("first_name") or "Someone"
+
+
+def log_to_owner(label, from_user):
+    send_telegram(
+        OWNER_USER_ID,
+        f"<i>Releases bot - {html.escape(label)} - from {html.escape(_who(from_user))} "
+        f"(id {from_user.get('id')})</i>",
+    )
+
+
+def flag_urgent(from_user):
+    send_telegram(
+        OWNER_USER_ID,
+        f"\U0001F6A8 <b>URGENT - site down report</b>\n"
+        f"From: {html.escape(_who(from_user))} (id {from_user.get('id')})\n"
+        f"Committed to a 1-hour response.",
+    )
+
+
+def forward_question(from_user, text):
+    send_telegram(
+        OWNER_USER_ID,
+        f"<b>Releases bot - question</b>\n"
+        f"From: {html.escape(_who(from_user))} (id {from_user.get('id')})\n\n"
+        f"{html.escape(text)}",
+    )
+
+
+def is_authorized(state, user_id):
+    return str(user_id) in state.get("authorized_users", {})
+
+
+def authorize_user(state, from_user):
+    """Records the user as authorized; returns True the first time (so callers
+    can log just the initial contact, not every repeat /start)."""
+    authorized = state.setdefault("authorized_users", {})
+    user_key = str(from_user.get("id"))
+    is_new = user_key not in authorized
+    authorized[user_key] = {
+        "name": from_user.get("first_name") or "",
+        "username": from_user.get("username") or "",
+        "authorized_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return is_new
+
+
+def handle_faq_callback(state, callback_query):
+    answer_callback_query(callback_query.get("id"))
+    cb_message = callback_query.get("message") or {}
+    chat_id = (cb_message.get("chat") or {}).get("id")
+    from_user = callback_query.get("from") or {}
+    if chat_id is None or not is_authorized(state, from_user.get("id")):
+        return
+
+    data = callback_query.get("data", "")
+    if data == "faq_other":
+        send_telegram(chat_id, CATCHALL_PROMPT_TEXT)
+        state.setdefault("awaiting_catchall", {})[str(from_user.get("id"))] = True
+        return
+
+    entry = FAQ_LOOKUP.get(data)
+    if not entry:
+        return
+    label, text = entry
+    send_telegram(chat_id, text)
+    if data == "faq_sitedown":
+        flag_urgent(from_user)
+    else:
+        log_to_owner(label, from_user)
+
+
+def handle_artist_message(state, msg):
+    """Handles a private-chat message to the Releases bot. Group chats are
+    ignored outright - this bot has no public presence anywhere."""
+    chat = msg.get("chat") or {}
+    if chat.get("type") != "private":
+        return
+    from_user = msg.get("from") or {}
+    user_id = from_user.get("id")
+    if user_id is None:
+        return
+    chat_id = chat["id"]
+    raw_text = (msg.get("text") or "").strip()
+
+    if raw_text.startswith("/start"):
+        parts = raw_text.split(maxsplit=1)
+        payload = parts[1].strip() if len(parts) > 1 else ""
+        if payload == "suite" or is_authorized(state, user_id):
+            if authorize_user(state, from_user):
+                log_to_owner("new contact via Moceol Suite", from_user)
+            send_telegram(chat_id, RELEASES_WELCOME_TEXT, reply_markup=build_faq_keyboard())
+        # An unrecognized /start payload from a never-authorized user gets no
+        # reply at all - the bot stays unreachable to anyone without the link.
+        return
+
+    if not is_authorized(state, user_id):
+        return
+
+    awaiting = state.setdefault("awaiting_catchall", {})
+    user_key = str(user_id)
+    if awaiting.get(user_key):
+        awaiting.pop(user_key, None)
+        forward_question(from_user, raw_text)
+        send_telegram(chat_id, "Got it - I've passed this along, we'll get back to you soon.")
+        return
+
+    if not raw_text or raw_text.startswith("/"):
+        return
+
+    # Anything free-typed that isn't part of a tracked flow defaults to the
+    # same catch-all behavior as the "Something else" FAQ button.
+    send_telegram(chat_id, CATCHALL_PROMPT_TEXT)
+    forward_question(from_user, raw_text)
 
 
 # ---------------------------------------------------------------------------
@@ -564,7 +783,14 @@ def main():
                 state["last_update_id"] = upd["update_id"]
                 callback_query = upd.get("callback_query")
                 if callback_query:
-                    handle_callback(state, callback_query)
+                    if callback_query.get("data", "").startswith("faq_"):
+                        handle_faq_callback(state, callback_query)
+                    else:
+                        handle_callback(state, callback_query)
+                    continue
+                msg = upd.get("message")
+                if msg:
+                    handle_artist_message(state, msg)
             save_state(state)
         except Exception as e:
             log.exception("Error handling Telegram updates: %s", e)
