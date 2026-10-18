@@ -24,6 +24,22 @@
     box-sizing: border-box;
 }
 
+/* Visually hidden but still in the accessibility tree and in the DOM's
+   rendered text - screen readers announce it, and analytics tools that read
+   link text (rather than aria-label) pick it up too. Icon-only buttons pair
+   this with their aria-label rather than relying on aria-label alone. */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 html {
     scroll-behavior: smooth;
 }

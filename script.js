@@ -52,7 +52,7 @@ function renderFooter() {
     }
     var year = new Date().getFullYear();
     var iconsHtml = FOOTER_SOCIAL_LINKS.map(function (link) {
-        return '<a class="' + link.cls + '" href="' + link.href + '" target="_blank" rel="noopener noreferrer" aria-label="' + link.label + '"><i class="' + link.icon + '"></i></a>';
+        return '<a class="' + link.cls + '" href="' + link.href + '" target="_blank" rel="noopener noreferrer" aria-label="' + link.label + '"><i class="' + link.icon + '"></i><span class="sr-only">' + link.label + '</span></a>';
     }).join("");
     footer.innerHTML =
         '<div class="footer-bottom"><p>copyright &copy;<span id="copyright-year">' + year + '</span> Moceol Entertainment. designed by <span class="designer">@moceol</span></p></div>' +
