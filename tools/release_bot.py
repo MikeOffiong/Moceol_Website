@@ -211,31 +211,30 @@ def strms_create_draft(spotify_track_url):
     return resp.json()["smartlink"]
 
 
-def strms_find_smartlink(smartlink_id):
-    """No documented single-item GET, so page through the list endpoint."""
-    cursor = ""
-    while True:
-        params = {"cursor": cursor} if cursor else {}
-        resp = requests.get(
-            f"{STRMS_BASE_URL}/workspaces/{STRMS_WORKSPACE_ID}/smartlinks",
-            headers=strms_headers(),
-            params=params,
-            timeout=20,
-        )
-        resp.raise_for_status()
-        body = resp.json()
-        for item in body.get("items", []):
-            if item.get("id") == smartlink_id:
-                return item
-        cursor = body.get("next_cursor") or ""
-        if not cursor:
-            return None
+def strms_get_smartlink(smartlink_id):
+    """Fetches one smartlink directly by id. Also captures the real ETag
+    response header (e.g. '"v3"') - that's what If-Match on /publish actually
+    wants, NOT the numeric "version" field from the JSON body. Those looked
+    interchangeable (version 1 vs ETag "v1") until a precondition-failed
+    error spelled out that If-Match must be the literal ETag string, read
+    from the response and sent back unchanged."""
+    resp = requests.get(
+        f"{STRMS_BASE_URL}/workspaces/{STRMS_WORKSPACE_ID}/smartlinks/{smartlink_id}",
+        headers=strms_headers(),
+        timeout=20,
+    )
+    if resp.status_code == 404:
+        return None
+    resp.raise_for_status()
+    data = resp.json()
+    data["_etag"] = resp.headers.get("ETag")
+    return data
 
 
-def strms_publish(smartlink_id, version):
+def strms_publish(smartlink_id, etag):
     resp = requests.post(
         f"{STRMS_BASE_URL}/workspaces/{STRMS_WORKSPACE_ID}/smartlinks/{smartlink_id}/publish",
-        headers=strms_headers({"If-Match": str(version)}),
+        headers=strms_headers({"If-Match": etag}),
         timeout=20,
     )
     resp.raise_for_status()
@@ -668,12 +667,12 @@ def notify_new_release(artist, release):
 
 
 def finalize_and_publish(artist, pending):
-    current = strms_find_smartlink(pending["strms_id"])
+    current = strms_get_smartlink(pending["strms_id"])
     if not current:
         send_telegram(OWNER_USER_ID, "Couldn't find that strms.link draft anymore — it may have been deleted. Aborting this release.")
         return False
 
-    strms_publish(current["id"], current["version"])
+    strms_publish(current["id"], current["_etag"])
 
     platforms = {
         map_platform_key(b.get("platform", "")): b.get("url", "")
