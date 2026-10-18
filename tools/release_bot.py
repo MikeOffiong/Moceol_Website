@@ -148,7 +148,7 @@ def largest_image_url(images):
 def get_latest_release(token, spotify_artist_id):
     resp = requests.get(
         f"https://api.spotify.com/v1/artists/{spotify_artist_id}/albums",
-        params={"include_groups": "single,album", "market": "US", "limit": 50},
+        params={"include_groups": "single,album", "market": "US", "limit": 10},
         headers={"Authorization": "Bearer " + token},
         timeout=15,
     )
@@ -198,7 +198,7 @@ def strms_create_draft(spotify_track_url):
         timeout=20,
     )
     resp.raise_for_status()
-    return resp.json()
+    return resp.json()["smartlink"]
 
 
 def strms_find_smartlink(smartlink_id):
