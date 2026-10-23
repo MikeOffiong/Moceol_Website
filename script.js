@@ -26,6 +26,11 @@ window.moceolTracking = {
     }
 };
 
+// Endpoint for the "New drop alerts" email capture - a small aiohttp service
+// on the droplet (systemd: moceol-subscribe.service), behind Caddy's HTTPS
+// reverse proxy. See initDropAlerts() near the bottom of this file.
+var ALERTS_SUBSCRIBE_URL = "https://api.moceol.com/subscribe";
+
 // Fires a tracking event, then follows the link. For same-tab links this
 // delays navigation briefly so the tracking request isn't cancelled by the
 // page unload; target="_blank" links aren't navigating this tab away at all,
@@ -416,6 +421,282 @@ function initShopGrid() {
     });
 }
 
+// ---------------------------------------------------------------------------
+// "New drop alerts" email capture - a header button on listen.html, a
+// floating widget everywhere else, sharing one modal and one endpoint.
+// ---------------------------------------------------------------------------
+var ALERTS_EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+var alertsState = {
+    lastTrigger: null,
+    placement: null,
+    submitting: false
+};
+
+function buildBellIconSvg() {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>' +
+        '<path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+}
+
+function buildCloseIconSvg() {
+    return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M18 6 6 18M6 6l12 12"/></svg>';
+}
+
+function getPageSlug() {
+    var path = window.location.pathname.replace(/^\/+|\/+$/g, "").replace(/\.html$/, "");
+    return path === "" || path === "index" ? "homepage" : path;
+}
+
+function buildAlertsModal() {
+    if (document.getElementById("alerts-modal-backdrop")) {
+        return;
+    }
+    var backdrop = document.createElement("div");
+    backdrop.className = "alerts-modal-backdrop";
+    backdrop.id = "alerts-modal-backdrop";
+    backdrop.hidden = true;
+    backdrop.innerHTML =
+        '<div class="alerts-modal" role="dialog" aria-modal="true" aria-labelledby="alerts-modal-heading" id="alerts-modal">' +
+        '<button type="button" class="alerts-close-btn" id="alerts-close-btn" aria-label="Close">' + buildCloseIconSvg() + "</button>" +
+        '<h2 id="alerts-modal-heading">Hey, I&rsquo;m glad you&rsquo;re here!</h2>' +
+        '<p class="alerts-modal-copy">I&rsquo;ll email you myself the moment new music drops.</p>' +
+        '<form id="alerts-form" novalidate>' +
+        '<label for="alerts-email-input" class="alerts-label">Email</label>' +
+        '<input type="email" id="alerts-email-input" name="email" class="alerts-input" placeholder="you@example.com" autocomplete="email" required />' +
+        '<label for="alerts-firstname-input" class="alerts-label">First name</label>' +
+        '<input type="text" id="alerts-firstname-input" name="first_name" class="alerts-input" placeholder="First name" autocomplete="given-name" required />' +
+        '<label for="alerts-lastname-input" class="alerts-label">Last name <span class="alerts-optional">(optional)</span></label>' +
+        '<input type="text" id="alerts-lastname-input" name="last_name" class="alerts-input" placeholder="Last name" autocomplete="family-name" />' +
+        '<div class="alerts-honeypot" aria-hidden="true">' +
+        '<label for="alerts-website-input">Leave this field blank</label>' +
+        '<input type="text" id="alerts-website-input" name="website" tabindex="-1" autocomplete="off" />' +
+        "</div>" +
+        '<p class="alerts-error" id="alerts-error" role="alert" hidden></p>' +
+        '<p class="alerts-success" id="alerts-success" role="status" hidden></p>' +
+        '<button type="submit" class="btn btn-solid alerts-submit-btn" id="alerts-submit-btn">Sign up</button>' +
+        "</form>" +
+        '<p class="alerts-unsub-note">Just new music, unsubscribe anytime.</p>' +
+        "</div>";
+    document.body.appendChild(backdrop);
+
+    document.getElementById("alerts-close-btn").addEventListener("click", closeAlertsModal);
+    backdrop.addEventListener("click", function (e) {
+        if (e.target === backdrop) {
+            closeAlertsModal();
+        }
+    });
+    document.getElementById("alerts-form").addEventListener("submit", handleAlertsSubmit);
+}
+
+function openAlertsModal(triggerEl, placement) {
+    buildAlertsModal();
+    alertsState.lastTrigger = triggerEl;
+    alertsState.placement = placement;
+
+    var form = document.getElementById("alerts-form");
+    form.reset();
+    form.hidden = false;
+    document.getElementById("alerts-error").hidden = true;
+    document.getElementById("alerts-success").hidden = true;
+    document.getElementById("alerts-submit-btn").disabled = false;
+
+    document.getElementById("alerts-modal-backdrop").hidden = false;
+    document.addEventListener("keydown", handleAlertsKeydown, true);
+    document.getElementById("alerts-email-input").focus();
+
+    if (typeof gtag === "function") {
+        gtag("event", "alerts_open", { placement: placement });
+    }
+}
+
+function closeAlertsModal() {
+    var backdrop = document.getElementById("alerts-modal-backdrop");
+    if (!backdrop || backdrop.hidden) {
+        return;
+    }
+    backdrop.hidden = true;
+    document.removeEventListener("keydown", handleAlertsKeydown, true);
+    if (alertsState.lastTrigger && typeof alertsState.lastTrigger.focus === "function") {
+        alertsState.lastTrigger.focus();
+    }
+}
+
+function handleAlertsKeydown(e) {
+    if (e.key === "Escape") {
+        closeAlertsModal();
+        return;
+    }
+    if (e.key !== "Tab") {
+        return;
+    }
+    var modal = document.getElementById("alerts-modal");
+    var focusable = modal.querySelectorAll('button:not([disabled]), [href], input:not([tabindex="-1"]), select, textarea');
+    if (!focusable.length) {
+        return;
+    }
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+    }
+}
+
+function handleAlertsSubmit(e) {
+    e.preventDefault();
+    if (alertsState.submitting) {
+        return;
+    }
+    var emailInput = document.getElementById("alerts-email-input");
+    var firstNameInput = document.getElementById("alerts-firstname-input");
+    var lastNameInput = document.getElementById("alerts-lastname-input");
+    var websiteInput = document.getElementById("alerts-website-input");
+    var errorEl = document.getElementById("alerts-error");
+    var email = emailInput.value.trim();
+    var firstName = firstNameInput.value.trim();
+    var lastName = lastNameInput.value.trim();
+
+    if (!firstName) {
+        errorEl.textContent = "Let us know your first name.";
+        errorEl.hidden = false;
+        firstNameInput.focus();
+        return;
+    }
+    if (!ALERTS_EMAIL_RE.test(email)) {
+        errorEl.textContent = "That doesn't look like a valid email address.";
+        errorEl.hidden = false;
+        emailInput.focus();
+        return;
+    }
+    errorEl.hidden = true;
+    alertsState.submitting = true;
+    document.getElementById("alerts-submit-btn").disabled = true;
+
+    fetch(ALERTS_SUBSCRIBE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            email: email,
+            first_name: firstName,
+            last_name: lastName,
+            source: alertsState.placement,
+            website: websiteInput.value
+        })
+    })
+        .then(function (resp) {
+            if (!resp.ok) {
+                throw new Error("bad_status");
+            }
+            return resp.json();
+        })
+        .then(function (data) {
+            if (!data || data.ok !== true) {
+                throw new Error("not_ok");
+            }
+            document.getElementById("alerts-form").hidden = true;
+            var successEl = document.getElementById("alerts-success");
+            successEl.textContent = "You’re in, " + firstName + " - watch your inbox.";
+            successEl.hidden = false;
+
+            if (typeof gtag === "function") {
+                gtag("event", "email_signup", { placement: alertsState.placement });
+            }
+            setTimeout(closeAlertsModal, 2000);
+        })
+        .catch(function () {
+            errorEl.textContent = "Something went wrong - please try again.";
+            errorEl.hidden = false;
+        })
+        .finally(function () {
+            alertsState.submitting = false;
+            document.getElementById("alerts-submit-btn").disabled = false;
+        });
+}
+
+// Nudges the floating widget up if it would overlap the footer (or any
+// future element marked data-alerts-avoid, e.g. a cookie banner), rather
+// than sitting on top of it.
+function adjustFloatingAlertsPosition() {
+    var btn = document.getElementById("alerts-float-btn");
+    if (!btn) {
+        return;
+    }
+    var baseOffset = 20;
+    var margin = 16;
+    var rect = btn.getBoundingClientRect();
+    var push = 0;
+    document.querySelectorAll(".site-footer, [data-alerts-avoid]").forEach(function (el) {
+        var r = el.getBoundingClientRect();
+        var overlaps = r.top < rect.bottom && r.bottom > rect.top && r.top < window.innerHeight;
+        if (overlaps) {
+            var needed = (window.innerHeight - r.top) + margin;
+            if (needed > push) {
+                push = needed;
+            }
+        }
+    });
+    btn.style.bottom = (baseOffset + push) + "px";
+}
+
+var alertsAdjustTicking = false;
+function throttledAdjustFloatingAlerts() {
+    if (alertsAdjustTicking) {
+        return;
+    }
+    alertsAdjustTicking = true;
+    window.requestAnimationFrame(function () {
+        adjustFloatingAlertsPosition();
+        alertsAdjustTicking = false;
+    });
+}
+
+function initDropAlerts() {
+    buildAlertsModal();
+
+    if (document.querySelector(".listen-main")) {
+        var navbar = document.querySelector(".navbar");
+        if (!navbar) {
+            return;
+        }
+        var headerBtn = document.createElement("button");
+        headerBtn.type = "button";
+        headerBtn.className = "alerts-header-btn";
+        headerBtn.id = "alerts-header-btn";
+        headerBtn.setAttribute("aria-label", "New drop alerts: sign up by email");
+        headerBtn.innerHTML =
+            '<span class="alerts-header-btn-text">New drop alerts</span>' +
+            '<span class="alerts-bell-icon">' + buildBellIconSvg() + "</span>";
+        headerBtn.addEventListener("click", function () {
+            openAlertsModal(headerBtn, "listen.html");
+        });
+        navbar.appendChild(headerBtn);
+        return;
+    }
+
+    var floatBtn = document.createElement("button");
+    floatBtn.type = "button";
+    floatBtn.className = "alerts-float-btn";
+    floatBtn.id = "alerts-float-btn";
+    floatBtn.setAttribute("aria-label", "New drop alerts: sign up by email");
+    floatBtn.innerHTML = buildBellIconSvg();
+    var placement = getPageSlug() + "-widget";
+    floatBtn.addEventListener("click", function () {
+        openAlertsModal(floatBtn, placement);
+    });
+    document.body.appendChild(floatBtn);
+
+    adjustFloatingAlertsPosition();
+    window.addEventListener("scroll", throttledAdjustFloatingAlerts, { passive: true });
+    window.addEventListener("resize", throttledAdjustFloatingAlerts);
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     renderFooter();
 
@@ -428,6 +709,7 @@ document.addEventListener("DOMContentLoaded", function () {
     initTrackStreamButtons();
     initListenPage();
     initShopGrid();
+    initDropAlerts();
 
     var hamburger = document.querySelector(".hamburger");
     var navLinks = document.querySelector(".nav-links");

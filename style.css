@@ -754,3 +754,232 @@ a {
 .listen-main + .site-footer {
     margin-top: 44px;
 }
+
+/* ============================================
+   "New drop alerts" email capture
+   - header button (listen.html only)
+   - floating widget (every other page)
+   - shared modal
+   ============================================ */
+
+.alerts-header-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 2px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: color 0.3s ease;
+}
+
+.alerts-header-btn-text {
+    color: var(--color-grey);
+    font-size: clamp(11px, 2.4vw, 13px);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.alerts-header-btn:hover .alerts-header-btn-text,
+.alerts-header-btn:focus-visible .alerts-header-btn-text {
+    color: var(--color-white-soft);
+}
+
+.alerts-bell-icon {
+    display: flex;
+    color: var(--color-amber);
+    flex: 0 0 auto;
+}
+
+.alerts-float-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 60;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-teal);
+    border: 2px solid var(--color-amber);
+    color: var(--color-amber);
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    transition: transform 0.3s ease, background 0.3s ease, color 0.3s ease;
+}
+
+.alerts-float-btn:hover,
+.alerts-float-btn:focus-visible {
+    background: var(--color-amber);
+    color: var(--color-ink);
+    transform: scale(1.06);
+}
+
+.alerts-header-btn:focus-visible,
+.alerts-float-btn:focus-visible,
+.alerts-close-btn:focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 2px;
+}
+
+.alerts-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.alerts-modal-backdrop[hidden] {
+    display: none;
+}
+
+.alerts-modal {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    background: var(--color-teal);
+    border: 1px solid var(--color-amber);
+    border-radius: 12px;
+    padding: 36px 28px 28px;
+    color: var(--color-white);
+}
+
+.alerts-modal h2 {
+    font-family: var(--font-heading);
+    font-size: clamp(22px, 4vw, 26px);
+    color: var(--color-white-soft);
+    margin-bottom: 10px;
+}
+
+.alerts-modal-copy {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-grey);
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.alerts-close-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 0;
+    color: var(--color-grey);
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.alerts-close-btn:hover {
+    color: var(--color-white);
+}
+
+#alerts-form {
+    display: flex;
+    flex-direction: column;
+}
+
+#alerts-form[hidden] {
+    display: none;
+}
+
+.alerts-label {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--color-grey);
+    margin-top: 14px;
+    margin-bottom: 6px;
+}
+
+.alerts-label:first-of-type {
+    margin-top: 0;
+}
+
+.alerts-optional {
+    color: rgba(190, 188, 188, 0.6);
+    font-weight: normal;
+}
+
+.alerts-input {
+    height: 44px;
+    padding: 0 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--color-grey);
+    border-radius: 6px;
+    color: var(--color-white);
+    font-family: var(--font-body);
+    font-size: 15px;
+}
+
+.alerts-input:focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 1px;
+    border-color: var(--color-amber);
+}
+
+.alerts-honeypot {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+}
+
+.alerts-error {
+    color: #ff8a8a;
+    font-family: var(--font-body);
+    font-size: 13px;
+    margin-top: 10px;
+}
+
+.alerts-success {
+    color: var(--color-amber);
+    font-family: var(--font-body);
+    font-size: 15px;
+    text-align: center;
+    padding: 10px 0;
+}
+
+.alerts-submit-btn {
+    margin-top: 16px;
+    width: 100%;
+    text-align: center;
+}
+
+.alerts-unsub-note {
+    margin-top: 16px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--color-grey);
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .alerts-modal-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .alerts-modal {
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+        border-bottom: 0;
+        padding: 28px 22px 26px;
+    }
+
+    .alerts-float-btn {
+        right: 16px;
+        bottom: 16px;
+    }
+}
