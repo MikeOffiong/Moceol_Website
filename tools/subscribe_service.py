@@ -51,6 +51,18 @@ from datetime import datetime, timezone
 import aiohttp
 from aiohttp import web
 
+from email_brand import (
+    ARTIST_NAME,
+    ARTIST_SITE_DISPLAY,
+    ARTIST_SITE_URL,
+    BRAND_MUTED,
+    RESEND_FROM,
+    UNSUB_FOOTNOTE,
+    build_artist_footer,
+    build_fan_footer,
+    render_email_html,
+)
+
 DB_PATH = os.environ.get("SUBSCRIBE_DB_PATH", "/root/moceol_subscribers.db")
 ALLOWED_ORIGINS = set(
     o.strip() for o in os.environ.get(
@@ -61,6 +73,7 @@ RATE_LIMIT_MAX = int(os.environ.get("RATE_LIMIT_MAX", "5"))
 RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "600"))
 LISTEN_HOST = os.environ.get("SUBSCRIBE_LISTEN_HOST", "127.0.0.1")
 LISTEN_PORT = int(os.environ.get("SUBSCRIBE_LISTEN_PORT", "8080"))
+UNSUBSCRIBE_BASE_URL = os.environ.get("UNSUBSCRIBE_BASE_URL", "https://api.moceol.com/unsubscribe")
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MAX_EMAIL_LEN = 254
@@ -70,7 +83,6 @@ MAX_BODY_BYTES = 8 * 1024  # this form never needs more than a few hundred bytes
 MAX_NAME_LEN = 100
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-RESEND_FROM = os.environ.get("RESEND_FROM", "Moceol <hello@hello.moceol.com>")
 CLIENT_NOTIFY_EMAIL = os.environ.get("CLIENT_NOTIFY_EMAIL", "moceol.ent@gmail.com")
 
 logging.basicConfig(
@@ -189,45 +201,70 @@ async def send_email(to, subject, html_body, text_body=None):
         return False
 
 
-async def notify_client_of_new_fan(fan_email, fan_name, source):
+async def notify_client_of_new_fan(fan_email, first_name, last_name, created_at_iso, source):
     """Fired (not awaited) right after a genuinely new subscriber row is
     committed. A failure here is logged and never touches the fan-facing
     response - the signup itself already succeeded."""
-    subject = "You've got a new fan!"
-    who = f"{fan_name} ({fan_email})" if fan_name else fan_email
+    full_name = f"{first_name} {last_name}".strip() if last_name else first_name
+    subject = f"New fan alert: {first_name} just joined your list"
+
+    signup_dt = datetime.fromisoformat(created_at_iso)
+    signup_display = signup_dt.strftime("%B %d, %Y at %I:%M %p UTC")
+
     text_body = (
-        f"Someone just signed up for new drop alerts on your site: {who}, from {source}.\n\n"
-        "Powered by Moceol"
+        f"You've got a new fan!\n\n"
+        f"{full_name} just signed up for your drop alerts.\n\n"
+        f"Email: {fan_email}\n"
+        f"Signed up: {signup_display}\n\n"
+        "They've already been sent a warm welcome email.\n\n"
+        f"Powered by {ARTIST_NAME}"
     )
-    html_body = (
-        f"<p>Someone just signed up for new drop alerts on your site: "
-        f"<strong>{html.escape(who)}</strong>, from <strong>{html.escape(source)}</strong>.</p>"
-        f'<p style="margin-top:28px;font-size:12px;color:#999;">Powered by Moceol</p>'
+    body_html = (
+        '<p style="margin:0 0 16px; font-size:19px; font-weight:bold;">You&rsquo;ve got a new fan! \U0001F389</p>'
+        f'<p style="margin:0 0 20px;"><strong>{html.escape(full_name)}</strong> just signed up for your drop alerts.</p>'
+        f'<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin:0 0 20px;">'
+        f'<tr><td style="padding:3px 0; width:90px; color:{BRAND_MUTED};">Email</td>'
+        f'<td style="padding:3px 0;">{html.escape(fan_email)}</td></tr>'
+        f'<tr><td style="padding:3px 0; color:{BRAND_MUTED};">Signed up</td>'
+        f'<td style="padding:3px 0;">{html.escape(signup_display)}</td></tr>'
+        "</table>"
+        f'<p style="margin:0; font-size:13px; color:{BRAND_MUTED};">They&rsquo;ve already been sent a warm welcome email.</p>'
     )
+    html_body = render_email_html(body_html, build_artist_footer())
+
     ok = await send_email(CLIENT_NOTIFY_EMAIL, subject, html_body, text_body)
     if not ok:
         log.error("New-fan notification email failed to send (source=%s)", source)
 
 
-async def send_fan_welcome_email(fan_email, first_name):
+async def send_fan_welcome_email(fan_email, first_name, unsubscribe_token):
     """Fired (not awaited) right alongside the client notification. Warm,
-    first-person, from the artist directly - greets the fan by first name,
-    as asked, and states plainly what they signed up for."""
+    first-person, from the artist directly - thanks the fan by name and
+    says what they'll get, without overpromising just releases (this
+    list will also carry things like client updates down the line)."""
     subject = f"Hello, {first_name}"
+    unsubscribe_url = f"{UNSUBSCRIBE_BASE_URL}?token={unsubscribe_token}"
+
     text_body = (
         f"Hey {first_name},\n\n"
-        "Thanks for signing up - I'll email you myself the moment new music drops. "
-        "That's it, nothing else.\n\n"
-        "Talk soon,\nMoceol\n\n"
-        "Just new music, unsubscribe anytime."
+        "Thank you so much for joining - it really means a lot to have you here.\n\n"
+        "You'll get new music and updates from me, straight to your inbox, whenever "
+        "there's something worth sharing.\n\n"
+        f"Talk soon,\n{ARTIST_NAME}\n\n"
+        f"There's more to explore - music, updates, and more - at {ARTIST_SITE_DISPLAY} "
+        f"({ARTIST_SITE_URL}).\n\n"
+        f"{UNSUB_FOOTNOTE}\n"
+        f"Unsubscribe: {unsubscribe_url}"
     )
-    html_body = (
-        f"<p>Hey {html.escape(first_name)},</p>"
-        f"<p>Thanks for signing up - I&rsquo;ll email you myself the moment new music drops. "
-        f"That&rsquo;s it, nothing else.</p>"
-        f"<p>Talk soon,<br/>Moceol</p>"
-        f'<p style="margin-top:28px;font-size:12px;color:#999;">Just new music, unsubscribe anytime.</p>'
+    body_html = (
+        f"<p style=\"margin:0 0 16px;\">Hey {html.escape(first_name)},</p>"
+        '<p style="margin:0 0 16px;">Thank you so much for joining - it really means a lot to have you here.</p>'
+        '<p style="margin:0 0 24px;">You&rsquo;ll get new music and updates from me, straight to your inbox, '
+        "whenever there&rsquo;s something worth sharing.</p>"
+        f'<p style="margin:0;">Talk soon,<br/>{html.escape(ARTIST_NAME)}</p>'
     )
+    html_body = render_email_html(body_html, build_fan_footer(unsubscribe_url))
+
     ok = await send_email(fan_email, subject, html_body, text_body)
     if not ok:
         log.error("Fan welcome email failed to send")
@@ -324,9 +361,8 @@ async def handle_subscribe(request):
         conn.close()
 
     if is_new_row:
-        fan_name = f"{first_name} {last_name}".strip()
-        fire_and_forget(notify_client_of_new_fan(email, fan_name, source))
-        fire_and_forget(send_fan_welcome_email(email, first_name))
+        fire_and_forget(notify_client_of_new_fan(email, first_name, last_name, created_at, source))
+        fire_and_forget(send_fan_welcome_email(email, first_name, token))
 
     return web.json_response({"ok": True}, headers=headers)
 

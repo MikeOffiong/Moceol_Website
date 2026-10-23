@@ -11,7 +11,10 @@ to source anything first.
         --release-key clarity-of-mind \\
         --title "Clarity of Mind" \\
         --link "https://moceol.com/listen.html?r=clarity-of-mind" \\
-        --message "New one just dropped - give it a listen!"
+        --message "New one just dropped - give it a listen!" \\
+        --cover-url "https://moceol.com/images/clarity-of-mind-cover.jpg"
+
+--cover-url is optional - omit it and the email just skips the image.
 
 --release-key is a short unique id for THIS release (the listen.html slug
 is a natural choice). It's how dedup works: every successful send is
@@ -66,9 +69,20 @@ def _load_env_file(path):
 
 _load_env_file(ENV_FILE_PATH)
 
+# email_brand reads its config from os.environ at import time, so this
+# import has to come after _load_env_file() populates the environment.
+from email_brand import (  # noqa: E402
+    ARTIST_NAME,
+    ARTIST_SITE_DISPLAY,
+    ARTIST_SITE_URL,
+    RESEND_FROM,
+    build_cta_button,
+    build_fan_footer,
+    render_email_html,
+)
+
 DB_PATH = os.environ.get("SUBSCRIBE_DB_PATH", "/root/moceol_subscribers.db")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-RESEND_FROM = os.environ.get("RESEND_FROM", "Moceol <hello@hello.moceol.com>")
 UNSUBSCRIBE_BASE_URL = os.environ.get("UNSUBSCRIBE_BASE_URL", "https://api.moceol.com/unsubscribe")
 SEND_DELAY_SECONDS = float(os.environ.get("ANNOUNCE_SEND_DELAY_SECONDS", "0.5"))
 
@@ -113,6 +127,7 @@ def parse_args():
     p.add_argument("--title", required=True, help="Release title.")
     p.add_argument("--link", required=True, help="listen.html link for this release.")
     p.add_argument("--message", required=True, help="Short custom message to include.")
+    p.add_argument("--cover-url", default="", help="Optional cover art image URL to include in the email.")
     p.add_argument("--dry-run", action="store_true", help="Preview recipients only - sends nothing, records nothing.")
     p.add_argument("--yes", action="store_true", help="Skip the confirmation prompt.")
     return p.parse_args()
@@ -146,24 +161,43 @@ def record_sent(email, release_key):
     conn.close()
 
 
-def build_email(first_name, title, link, message, unsubscribe_url):
-    greeting = f"Hey, {first_name}" if first_name else "Hey"
-    subject = f"New release: {title}"
-    text_body = (
-        f"{greeting},\n\n"
-        f"{message}\n\n"
-        f"{title} - listen now: {link}\n\n"
-        f"Talk soon,\nMoceol\n\n"
-        f"Unsubscribe: {unsubscribe_url}"
+def build_email(first_name, title, link, message, cover_url, unsubscribe_url):
+    greeting = f"Hey {first_name}," if first_name else "Hey,"
+    subject = f"New music from {ARTIST_NAME}: {title}"
+
+    text_lines = [
+        f"{greeting}",
+        "",
+        message,
+        "",
+        f"{title} - listen now: {link}",
+        "",
+        f"Talk soon,\n{ARTIST_NAME}",
+        "",
+        f"There's more to explore - music, updates, and more - at {ARTIST_SITE_DISPLAY} ({ARTIST_SITE_URL}).",
+        "",
+        "New music and updates from the artist, unsubscribe anytime.",
+        f"Unsubscribe: {unsubscribe_url}",
+    ]
+    text_body = "\n".join(text_lines)
+
+    cover_html = ""
+    if cover_url:
+        cover_html = (
+            f'<img src="{html.escape(cover_url)}" alt="{html.escape(title)}" width="400" '
+            f'style="display:block; width:100%; max-width:400px; border-radius:10px; margin:0 0 20px;" />'
+        )
+
+    body_html = (
+        f'<p style="margin:0 0 16px;">{html.escape(greeting)}</p>'
+        f'<p style="margin:0 0 20px;">{html.escape(message)}</p>'
+        f"{cover_html}"
+        f'<p style="margin:0 0 4px; font-size:18px; font-weight:bold;">{html.escape(title)}</p>'
+        + build_cta_button("Listen now", html.escape(link))
+        + f'<p style="margin:12px 0 0;">Talk soon,<br/>{html.escape(ARTIST_NAME)}</p>'
     )
-    html_body = (
-        f"<p>{html.escape(greeting)},</p>"
-        f"<p>{html.escape(message)}</p>"
-        f'<p><a href="{html.escape(link)}">{html.escape(title)} - listen now</a></p>'
-        f"<p>Talk soon,<br/>Moceol</p>"
-        f'<p style="margin-top:32px;font-size:12px;color:#999;">'
-        f'<a href="{html.escape(unsubscribe_url)}" style="color:#999;">Unsubscribe</a></p>'
-    )
+    html_body = render_email_html(body_html, build_fan_footer(unsubscribe_url))
+
     return subject, html_body, text_body
 
 
@@ -218,7 +252,9 @@ async def main_async(args):
     async with aiohttp.ClientSession() as session:
         for email, first_name, token in pending:
             unsubscribe_url = f"{UNSUBSCRIBE_BASE_URL}?token={token}"
-            subject, html_body, text_body = build_email(first_name, args.title, args.link, args.message, unsubscribe_url)
+            subject, html_body, text_body = build_email(
+                first_name, args.title, args.link, args.message, args.cover_url, unsubscribe_url
+            )
             ok = await send_one(session, email, subject, html_body, text_body)
             if ok:
                 record_sent(email, args.release_key)

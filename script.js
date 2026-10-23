@@ -479,7 +479,7 @@ function buildAlertsModal() {
         '<p class="alerts-success" id="alerts-success" role="status" hidden></p>' +
         '<button type="submit" class="btn btn-solid alerts-submit-btn" id="alerts-submit-btn">Sign up</button>' +
         "</form>" +
-        '<p class="alerts-unsub-note">Just new music, unsubscribe anytime.</p>' +
+        '<p class="alerts-unsub-note">New music and updates from the artist, unsubscribe anytime.</p>' +
         "</div>";
     document.body.appendChild(backdrop);
 
