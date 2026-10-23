@@ -52,10 +52,16 @@ import aiohttp
 from aiohttp import web
 
 from email_brand import (
+    ARTIST_ACCENT,
+    ARTIST_BG,
+    ARTIST_CARD_BG,
     ARTIST_NAME,
     ARTIST_SITE_DISPLAY,
     ARTIST_SITE_URL,
     BRAND_MUTED,
+    PLATFORM_ACCENT,
+    PLATFORM_BG,
+    PLATFORM_CARD_BG,
     RESEND_FROM,
     UNSUB_FOOTNOTE,
     build_artist_footer,
@@ -230,7 +236,9 @@ async def notify_client_of_new_fan(fan_email, first_name, last_name, created_at_
         "</table>"
         f'<p style="margin:0; font-size:13px; color:{BRAND_MUTED};">They&rsquo;ve already been sent a warm welcome email.</p>'
     )
-    html_body = render_email_html(body_html, build_artist_footer())
+    html_body = render_email_html(
+        body_html, build_artist_footer(), PLATFORM_BG, PLATFORM_CARD_BG, PLATFORM_ACCENT
+    )
 
     ok = await send_email(CLIENT_NOTIFY_EMAIL, subject, html_body, text_body)
     if not ok:
@@ -263,7 +271,9 @@ async def send_fan_welcome_email(fan_email, first_name, unsubscribe_token):
         "whenever there&rsquo;s something worth sharing.</p>"
         f'<p style="margin:0;">Talk soon,<br/>{html.escape(ARTIST_NAME)}</p>'
     )
-    html_body = render_email_html(body_html, build_fan_footer(unsubscribe_url))
+    html_body = render_email_html(
+        body_html, build_fan_footer(unsubscribe_url), ARTIST_BG, ARTIST_CARD_BG, ARTIST_ACCENT
+    )
 
     ok = await send_email(fan_email, subject, html_body, text_body)
     if not ok:

@@ -72,6 +72,9 @@ _load_env_file(ENV_FILE_PATH)
 # email_brand reads its config from os.environ at import time, so this
 # import has to come after _load_env_file() populates the environment.
 from email_brand import (  # noqa: E402
+    ARTIST_ACCENT,
+    ARTIST_BG,
+    ARTIST_CARD_BG,
     ARTIST_NAME,
     ARTIST_SITE_DISPLAY,
     ARTIST_SITE_URL,
@@ -193,10 +196,12 @@ def build_email(first_name, title, link, message, cover_url, unsubscribe_url):
         f'<p style="margin:0 0 20px;">{html.escape(message)}</p>'
         f"{cover_html}"
         f'<p style="margin:0 0 4px; font-size:18px; font-weight:bold;">{html.escape(title)}</p>'
-        + build_cta_button("Listen now", html.escape(link))
+        + build_cta_button("Listen now", html.escape(link), ARTIST_ACCENT)
         + f'<p style="margin:12px 0 0;">Talk soon,<br/>{html.escape(ARTIST_NAME)}</p>'
     )
-    html_body = render_email_html(body_html, build_fan_footer(unsubscribe_url))
+    html_body = render_email_html(
+        body_html, build_fan_footer(unsubscribe_url, ARTIST_ACCENT), ARTIST_BG, ARTIST_CARD_BG, ARTIST_ACCENT
+    )
 
     return subject, html_body, text_body
 
