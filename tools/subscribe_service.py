@@ -238,12 +238,12 @@ UNSUBSCRIBE_PAGE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Unsubscribed | Moceol</title>
 <style>
-  body {{ background:#003f42; color:#fff; font-family:Tahoma,Geneva,sans-serif;
+  body { background:#003f42; color:#fff; font-family:Tahoma,Geneva,sans-serif;
     display:flex; align-items:center; justify-content:center; min-height:100vh;
-    margin:0; padding:24px; text-align:center; }}
-  .card {{ max-width:420px; }}
-  h1 {{ color:#f2aa4c; font-family:Helvetica,Arial,sans-serif; font-size:26px; margin-bottom:14px; }}
-  p {{ color:rgb(190,188,188); line-height:1.5; }}
+    margin:0; padding:24px; text-align:center; }
+  .card { max-width:420px; }
+  h1 { color:#f2aa4c; font-family:Helvetica,Arial,sans-serif; font-size:26px; margin-bottom:14px; }
+  p { color:rgb(190,188,188); line-height:1.5; }
 </style></head>
 <body><div class="card"><h1>You've been unsubscribed.</h1>
 <p>You won't get any more drop alerts from Moceol. Sorry to see you go.</p>

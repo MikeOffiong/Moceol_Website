@@ -3,7 +3,9 @@
 Moceol -- manual "new release" announcement sender.
 ====================================================
 Run by hand on the droplet. Never automatic, never triggered by the web
-service - nothing schedules this.
+service - nothing schedules this. Loads its config (API key, from
+address, etc.) straight from /root/moceol_subscribe.env itself - no need
+to source anything first.
 
     /root/venv/bin/python3 /root/send_announcement.py \\
         --release-key clarity-of-mind \\
@@ -36,6 +38,33 @@ import sqlite3
 import sys
 
 import aiohttp
+
+ENV_FILE_PATH = os.environ.get("SUBSCRIBE_ENV_FILE", "/root/moceol_subscribe.env")
+
+
+def _load_env_file(path):
+    """This is a manual script, not a systemd unit, so EnvironmentFile=
+    never applies to it - load the same env file by hand. Does its own
+    KEY=VALUE parsing rather than shell-sourcing the file, since values
+    like RESEND_FROM contain '<' '>' that a bash `source` misreads as
+    redirection. Never overwrites a variable already set in the real
+    environment."""
+    if not os.path.exists(path):
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
+            os.environ.setdefault(key, value)
+
+
+_load_env_file(ENV_FILE_PATH)
 
 DB_PATH = os.environ.get("SUBSCRIBE_DB_PATH", "/root/moceol_subscribers.db")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
