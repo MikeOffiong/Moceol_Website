@@ -348,6 +348,9 @@ def transform_page(raw_html, token, fields, theme_block, footer_links_json, page
                         f'{fields["artist_name"]} | {page_title_suffix}')
     out = _inject_body_banner(out)
     out = _replace_logo(out, fields["artist_name"])
+    # The real nav links to Moceol's own services/sales page - that has no
+    # business appearing in another artist's preview.
+    out = re.sub(r'\s*<li><a href="/services">SERVICES</a></li>', "", out)
     return out
 
 
@@ -454,6 +457,8 @@ def build_support_page(fields):
         count=1,
         flags=re.DOTALL,
     )
+    raw = re.sub(r"<h1>SUPPORT [A-Z]+</h1>", "<h1>SUPPORT</h1>", raw, count=1)
+    raw = raw.replace("images/photo-4-web.jpg", "images/portrait.jpg")
     return raw
 
 
