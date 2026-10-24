@@ -726,19 +726,29 @@ function initServicesForm() {
             payload[key] = platformValues[key];
         });
 
+        var TOO_MANY_SUBMISSIONS_ERRORS = {
+            too_many_submissions_email: true,
+            too_many_submissions_whatsapp: true,
+            too_many_submissions_ip: true
+        };
+
         fetch(INTAKE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         })
             .then(function (resp) {
-                if (!resp.ok) {
-                    throw new Error("bad_status");
-                }
-                return resp.json();
+                return resp.json().then(function (data) {
+                    return { ok: resp.ok, data: data };
+                });
             })
-            .then(function (data) {
-                if (!data || data.ok !== true) {
+            .then(function (result) {
+                var data = result.data;
+                if (!result.ok || !data || data.ok !== true) {
+                    var code = data && data.error;
+                    if (code && TOO_MANY_SUBMISSIONS_ERRORS[code]) {
+                        throw new Error("too_many_submissions");
+                    }
                     throw new Error("not_ok");
                 }
                 form.hidden = true;
@@ -749,8 +759,12 @@ function initServicesForm() {
                     gtag("event", "intake_form_submit", { tier: tier });
                 }
             })
-            .catch(function () {
-                showError("Something went wrong — please try again, or email moceol.ent@gmail.com directly.");
+            .catch(function (err) {
+                if (err && err.message === "too_many_submissions") {
+                    showError("You've already submitted the maximum number of requests. Please email moceol.ent@gmail.com directly if you need help.");
+                } else {
+                    showError("Something went wrong — please try again, or email moceol.ent@gmail.com directly.");
+                }
             })
             .finally(function () {
                 submitBtn.disabled = false;

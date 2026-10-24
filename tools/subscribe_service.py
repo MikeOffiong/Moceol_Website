@@ -158,6 +158,17 @@ PREVIEWS_DIR = os.environ.get("PREVIEWS_DIR", "/root/moceol_previews")
 PREVIEW_HOURS = 24
 PREVIEW_PUBLIC_BASE = os.environ.get("PREVIEW_PUBLIC_BASE", "https://api.moceol.com/preview")
 
+# --- Fraud protection: lifetime caps on how many preview-generating
+# submissions a single identity can make. IP gets more headroom since
+# carrier-grade NAT means several real artists can share one. Exceeding a
+# cap rejects the submission outright (no preview, no row written); staying
+# under the cap but submitting again just gets flagged in the Telegram
+# alert so Moceol can see repeat submitters without blocking them. ---
+MAX_SUBMISSIONS_PER_EMAIL = int(os.environ.get("MAX_SUBMISSIONS_PER_EMAIL", "3"))
+MAX_SUBMISSIONS_PER_WHATSAPP = int(os.environ.get("MAX_SUBMISSIONS_PER_WHATSAPP", "3"))
+MAX_SUBMISSIONS_PER_IP = int(os.environ.get("MAX_SUBMISSIONS_PER_IP", "10"))
+SPOTIFY_ARTIST_LINK_RE = re.compile(r"artist[/:][a-zA-Z0-9]+")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -310,6 +321,7 @@ def init_db():
         "support_enabled": "INTEGER",
         "support_link": "TEXT",
         "support_text": "TEXT",
+        "ip_address": "TEXT",
     }
     for col, col_type in new_intake_columns.items():
         if col not in intake_cols:
@@ -1003,21 +1015,41 @@ async def handle_intake(request):
     created_at = datetime.now(timezone.utc).isoformat()
     conn = sqlite3.connect(DB_PATH)
     try:
+        # Fraud protection: lifetime caps per identity, checked and inserted
+        # inside the same connection with no awaits in between, so two
+        # near-simultaneous submissions from the same identity can't both
+        # slip past the check before either one is counted.
+        email_count = conn.execute(
+            "SELECT COUNT(*) FROM intake_submissions WHERE email = ?", (contact_email,)
+        ).fetchone()[0]
+        whatsapp_count = conn.execute(
+            "SELECT COUNT(*) FROM intake_submissions WHERE whatsapp = ?", (whatsapp,)
+        ).fetchone()[0]
+        ip_count = conn.execute(
+            "SELECT COUNT(*) FROM intake_submissions WHERE ip_address = ?", (ip,)
+        ).fetchone()[0]
+        if email_count >= MAX_SUBMISSIONS_PER_EMAIL:
+            return web.json_response({"ok": False, "error": "too_many_submissions_email"}, status=429, headers=headers)
+        if whatsapp_count >= MAX_SUBMISSIONS_PER_WHATSAPP:
+            return web.json_response({"ok": False, "error": "too_many_submissions_whatsapp"}, status=429, headers=headers)
+        if ip_count >= MAX_SUBMISSIONS_PER_IP:
+            return web.json_response({"ok": False, "error": "too_many_submissions_ip"}, status=429, headers=headers)
+
         conn.execute(
             "INSERT INTO intake_submissions "
             "(name, email, artist_name, tier, created_at, client_id, whatsapp, bio, spotify_url, "
             "main_color, accent_color, domain_primary, domain_backup, fan_alert_email, "
             "apple_music_url, youtube_url, amazon_music_url, facebook_url, x_url, tiktok_url, "
             "instagram_url, audiomack_url, boomplay_url, gumroad_mode, gumroad_handle, other_payment_link, "
-            "support_enabled, support_link, support_text) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "support_enabled, support_link, support_text, ip_address) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 artist_name, contact_email, artist_name, tier, created_at, client_id, whatsapp, bio, spotify_url,
                 main_color, accent_color, domain_primary, domain_backup, fan_alert_email,
                 platform_urls["apple_music_url"], platform_urls["youtube_url"], platform_urls["amazon_music_url"],
                 platform_urls["facebook_url"], platform_urls["x_url"], platform_urls["tiktok_url"],
                 platform_urls["instagram_url"], platform_urls["audiomack_url"], platform_urls["boomplay_url"],
-                gumroad_mode, gumroad_handle, other_payment_link, int(support_enabled), support_link, support_text,
+                gumroad_mode, gumroad_handle, other_payment_link, int(support_enabled), support_link, support_text, ip,
             ),
         )
         conn.commit()
@@ -1025,6 +1057,9 @@ async def handle_intake(request):
         log.info("New intake submission accepted (tier=%s)", tier)
     finally:
         conn.close()
+
+    is_repeat = email_count > 0 or whatsapp_count > 0
+    spotify_looks_invalid = not SPOTIFY_ARTIST_LINK_RE.search(spotify_url)
 
     fields = {
         "artist_name": artist_name,
@@ -1048,9 +1083,15 @@ async def handle_intake(request):
     }
     fire_and_forget(notify_client_of_new_inquiry(fields, created_at))
     tier_label = INTAKE_TIER_LABELS.get(tier, tier)
-    fire_and_forget(send_telegram_notification(
-        f"\U0001F4EC New services inquiry\n<b>{html.escape(artist_name)}</b> ({html.escape(tier_label)})"
-    ))
+    alert_lines = [f"\U0001F4EC New services inquiry\n<b>{html.escape(artist_name)}</b> ({html.escape(tier_label)})"]
+    if is_repeat:
+        alert_lines.append(
+            f"⚠️ Repeat submitter — this email seen {email_count + 1}x, "
+            f"this WhatsApp number seen {whatsapp_count + 1}x before"
+        )
+    if spotify_looks_invalid:
+        alert_lines.append("⚠️ Spotify link doesn't look like an artist page — worth a manual check")
+    fire_and_forget(send_telegram_notification("\n".join(alert_lines)))
 
     preview_url = await generate_preview(submission_id, client_id, fields, is_refresh=False)
     if preview_url:
