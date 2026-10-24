@@ -1213,6 +1213,14 @@ a {
     line-height: 1.5;
 }
 
+.autosave-note {
+    text-align: center;
+    color: var(--color-accent);
+    font-family: var(--font-body);
+    font-size: 13px;
+    margin: 0 0 16px;
+}
+
 .services-checklist {
     max-width: 480px;
     margin: 0 auto 28px;

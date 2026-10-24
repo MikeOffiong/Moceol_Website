@@ -108,6 +108,8 @@
             </div>
 
             <form id="intake-form" novalidate>
+                <p class="autosave-note" id="autosave-note" hidden>We saved your progress.</p>
+
                 <p class="alerts-label">Which are you going with?</p>
                 <div class="radio-group" id="tier-radio-group">
                     <label class="radio-option">
@@ -205,6 +207,8 @@
                     <label for="intake-bio" class="alerts-label">Short bio</label>
                     <textarea id="intake-bio" name="bio" class="alerts-input" placeholder="A few sentences about you and your music"></textarea>
                     <p class="field-hint">Goes on your Bio page, word for word.</p>
+
+                    <p class="photo-warning" id="photo-restore-note" hidden>You added photos before &mdash; please re-select them, since we can't save photos between visits.</p>
 
                     <div class="photo-upload-field">
                         <label class="alerts-label">Your portrait photo</label>

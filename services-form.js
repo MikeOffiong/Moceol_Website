@@ -180,6 +180,7 @@ function initPortraitUpload() {
             .then(function () {
                 portraitState.uploaded = true;
                 dropzone.textContent = "Tap to choose a different photo";
+                saveFormDraft();
             })
             .catch(function () {
                 warningEl.textContent = "That photo didn't upload — please try again.";
@@ -233,6 +234,7 @@ function initGalleryUpload() {
             uploadPhoto(file, "gallery")
                 .then(function () {
                     thumb.classList.remove("photo-thumb-uploading");
+                    saveFormDraft();
                 })
                 .catch(function () {
                     thumb.remove();
@@ -410,6 +412,133 @@ var URL_RE = /^https?:\/\/[^\s]+\.[^\s]+$/;
 var DOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i;
 var EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
+// ---------------------------------------------------------------------------
+// Auto-save - every text/choice answer goes to localStorage as the artist
+// fills the form, restored automatically on return. Photos can't be saved
+// (File objects aren't serializable), so only a yes/no flag of whether one
+// was attached before is kept, to drive the "please re-select" reminder.
+// Local only: nothing here ever reaches the network - that's still only
+// the explicit submit.
+// ---------------------------------------------------------------------------
+var AUTOSAVE_KEY = "moceol_services_form_draft";
+
+var AUTOSAVE_FIELD_IDS = [
+    "intake-artist-name", "intake-contact-email", "intake-whatsapp", "intake-spotify",
+    "intake-main-color", "intake-accent-color", "intake-domain-primary", "intake-domain-backup",
+    "intake-fan-alert-email", "intake-apple", "intake-youtube", "intake-amazon", "intake-facebook",
+    "intake-x", "intake-tiktok", "intake-instagram", "intake-audiomack", "intake-boomplay",
+    "intake-bio", "intake-gumroad-handle", "intake-other-payment-link",
+    "intake-support-link", "intake-support-text"
+];
+
+var AUTOSAVE_RADIO_GROUPS = ["tier", "gumroad_mode", "support_enabled"];
+
+function fireChange(el) {
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function saveFormDraft() {
+    try {
+        var draft = { fields: {}, radios: {} };
+        AUTOSAVE_FIELD_IDS.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) {
+                draft.fields[id] = el.value;
+            }
+        });
+        AUTOSAVE_RADIO_GROUPS.forEach(function (name) {
+            var checked = document.querySelector('input[name="' + name + '"]:checked');
+            draft.radios[name] = checked ? checked.value : "";
+        });
+        draft.hadPortrait = portraitState.uploaded;
+        draft.galleryCount = galleryState.count;
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(draft));
+    } catch (e) {
+        // localStorage unavailable (private browsing, quota, etc.) - the
+        // form still works, it just won't remember anything.
+    }
+}
+
+function clearFormDraft() {
+    try {
+        localStorage.removeItem(AUTOSAVE_KEY);
+    } catch (e) {}
+}
+
+var autosaveTimer = null;
+
+function scheduleAutosave() {
+    if (autosaveTimer) {
+        clearTimeout(autosaveTimer);
+    }
+    autosaveTimer = setTimeout(saveFormDraft, 400);
+}
+
+function restoreFormDraft() {
+    var raw;
+    try {
+        raw = localStorage.getItem(AUTOSAVE_KEY);
+    } catch (e) {
+        return;
+    }
+    if (!raw) {
+        return;
+    }
+
+    var draft;
+    try {
+        draft = JSON.parse(raw);
+    } catch (e) {
+        return;
+    }
+
+    var restoredAny = false;
+
+    Object.keys(draft.fields || {}).forEach(function (id) {
+        var el = document.getElementById(id);
+        var value = draft.fields[id];
+        if (el && value) {
+            el.value = value;
+            fireChange(el);
+            restoredAny = true;
+        }
+    });
+
+    Object.keys(draft.radios || {}).forEach(function (name) {
+        var value = draft.radios[name];
+        if (!value) {
+            return;
+        }
+        var el = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
+        if (el) {
+            el.checked = true;
+            fireChange(el);
+            restoredAny = true;
+        }
+    });
+
+    if (restoredAny) {
+        var note = document.getElementById("autosave-note");
+        if (note) {
+            note.hidden = false;
+        }
+    }
+
+    if (draft.hadPortrait || draft.galleryCount > 0) {
+        var photoNote = document.getElementById("photo-restore-note");
+        if (photoNote) {
+            photoNote.hidden = false;
+        }
+    }
+}
+
+function initAutosave(form) {
+    restoreFormDraft();
+    form.addEventListener("input", scheduleAutosave);
+    form.addEventListener("change", scheduleAutosave);
+}
+
 function initServicesForm() {
     var form = document.getElementById("intake-form");
     if (!form) {
@@ -423,6 +552,7 @@ function initServicesForm() {
     initGalleryUpload();
     initProofLine();
     initColorPreview();
+    initAutosave(form);
 
     fireFunnelEvent("page_visit");
 
@@ -613,6 +743,7 @@ function initServicesForm() {
                 }
                 form.hidden = true;
                 successEl.hidden = false;
+                clearFormDraft();
                 fireFunnelEvent("form_submitted", tier);
                 if (typeof gtag === "function") {
                     gtag("event", "intake_form_submit", { tier: tier });
