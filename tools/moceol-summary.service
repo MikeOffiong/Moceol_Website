@@ -1,0 +1,10 @@
+[Unit]
+Description=Moceol daily/weekly Telegram analytics summary
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root
+ExecStart=/root/venv/bin/python3 /root/telegram_summary.py
+EnvironmentFile=/root/moceol_subscribe.env
+StandardOutput=append:/root/summary.log
+StandardError=append:/root/summary.log
