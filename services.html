@@ -103,7 +103,7 @@
                     <li>Two domain name ideas (your first choice and a backup)</li>
                     <li>A main color and an accent color for your brand</li>
                     <li>If you're going with a full website: a short bio and your photos</li>
-                    <li>If you're going with a full website: your Gumroad account, if you already have one</li>
+                    <li>If you're going with a full website: your Gumroad account or payment link, if you already have one</li>
                 </ul>
             </div>
 
@@ -230,20 +230,29 @@
                         <label for="intake-photo-consent">I own these photos, or have permission to use them on my website.</label>
                     </div>
 
-                    <label class="alerts-label">Gumroad, for fans to support you directly</label>
+                    <label class="alerts-label">Where should fans buy or support you?</label>
                     <div class="radio-group" id="gumroad-radio-group">
                         <label class="radio-option">
                             <input type="radio" name="gumroad_mode" value="own" id="gumroad-own" />
-                            <span>I already have my own Gumroad account</span>
+                            <span>I already have a Gumroad account</span>
                         </label>
                         <label class="radio-option">
                             <input type="radio" name="gumroad_mode" value="setup" id="gumroad-setup" />
-                            <span>Set one up for me, using my contact email above</span>
+                            <span>Set one up for me using my contact email</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="gumroad_mode" value="other" id="gumroad-other" />
+                            <span>I already use another payment link, like Flutterwave, Paystack or Selar</span>
                         </label>
                     </div>
                     <div class="form-subfields" id="gumroad-handle-field" hidden>
                         <label for="intake-gumroad-handle" class="alerts-label">Your Gumroad account (email or profile link)</label>
                         <input type="text" id="intake-gumroad-handle" name="gumroad_handle" class="alerts-input" placeholder="you@example.com or gumroad.com/yourname" />
+                    </div>
+                    <div class="form-subfields" id="other-payment-link-field" hidden>
+                        <label for="intake-other-payment-link" class="alerts-label">Your payment link</label>
+                        <input type="url" id="intake-other-payment-link" name="other_payment_link" class="alerts-input" placeholder="https://flutterwave.com/pay/..." />
+                        <p class="field-hint">Must start with https://</p>
                     </div>
 
                     <label class="alerts-label">Include a support/donation page?</label>
@@ -269,11 +278,12 @@
                     Setup is 50,000 naira for a landing page or 100,000 naira for a
                     full website, paid in two halves: 50% to begin, and the rest
                     plus your domain when you approve your site. Your domain is
-                    billed separately, at cost. After setup, keeping your site
-                    running is 12,000 naira a year. Changes after you go live are
-                    5,000 naira each. One review before go-live is included, and
-                    your site stays on a private preview until the final payment
-                    is made.
+                    billed separately, at cost. Your first year of site upkeep is
+                    included in your setup fee. From the second year, keeping your
+                    site running is 12,000 naira a year. Changes after you go live
+                    are 5,000 naira each. One review before go-live is included,
+                    and your site stays on a private preview until the final
+                    payment is made.
                 </p>
 
                 <div class="alerts-honeypot" aria-hidden="true">
@@ -303,7 +313,11 @@
             </details>
             <details>
                 <summary>What if I want changes later?</summary>
-                <p>One review before go-live is included for free. After that, changes are 5,000 naira each, and keeping your site running is 12,000 naira a year.</p>
+                <p>One review before go-live is included. After you go live, changes are 5,000 naira each.</p>
+            </details>
+            <details>
+                <summary>What does it cost after the first year?</summary>
+                <p>Your first year of site upkeep is included in your setup fee. From the second year, keeping your site running is 12,000 naira a year, and your domain renews separately, at cost.</p>
             </details>
         </div>
     </main>

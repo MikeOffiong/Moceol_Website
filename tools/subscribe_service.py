@@ -296,6 +296,7 @@ def init_db():
         "boomplay_url": "TEXT",
         "gumroad_mode": "TEXT",
         "gumroad_handle": "TEXT",
+        "other_payment_link": "TEXT",
         "support_enabled": "INTEGER",
         "support_link": "TEXT",
         "support_text": "TEXT",
@@ -556,8 +557,14 @@ async def notify_client_of_new_inquiry(fields, created_at_iso):
             row_specs.append((col.replace("_url", "").replace("_", " ").title(), fields[col]))
     if fields["tier"] == "full":
         row_specs.append(("Bio", fields["bio"]))
-        gumroad_display = fields["gumroad_handle"] if fields["gumroad_mode"] == "own" else "Set one up with their contact email"
-        row_specs.append(("Gumroad", gumroad_display))
+        payment_mode = fields["gumroad_mode"]
+        if payment_mode == "own":
+            payment_display = f'Gumroad - {fields["gumroad_handle"]}'
+        elif payment_mode == "other":
+            payment_display = f'Other link - {fields["other_payment_link"]}'
+        else:
+            payment_display = "Set one up with their contact email"
+        row_specs.append(("Where fans buy/support", payment_display))
         if fields["support_enabled"]:
             row_specs.append(("Support link", fields["support_link"]))
             row_specs.append(("Support line", fields["support_text"]))
@@ -727,6 +734,7 @@ async def handle_intake(request):
     bio = field("bio", MAX_BIO_LEN)
     gumroad_mode = field("gumroad_mode", 10)
     gumroad_handle = field("gumroad_handle", MAX_URL_LEN)
+    other_payment_link = field("other_payment_link", MAX_URL_LEN)
     support_enabled = bool(body.get("support_enabled"))
     support_link = field("support_link", MAX_URL_LEN)
     support_text = field("support_text", MAX_SUPPORT_TEXT_LEN)
@@ -756,10 +764,15 @@ async def handle_intake(request):
     if tier == "full":
         if not bio:
             return web.json_response({"ok": False, "error": "missing_bio"}, status=400, headers=headers)
-        if gumroad_mode not in ("own", "setup"):
+        if gumroad_mode not in ("own", "setup", "other"):
             return web.json_response({"ok": False, "error": "invalid_gumroad_mode"}, status=400, headers=headers)
         if gumroad_mode == "own" and not gumroad_handle:
             return web.json_response({"ok": False, "error": "missing_gumroad_handle"}, status=400, headers=headers)
+        if gumroad_mode == "other":
+            if not other_payment_link.startswith("https://") or not URL_RE.match(other_payment_link):
+                return web.json_response({"ok": False, "error": "invalid_other_payment_link"}, status=400, headers=headers)
+        else:
+            other_payment_link = ""
         if support_enabled:
             if not support_link or not URL_RE.match(support_link):
                 return web.json_response({"ok": False, "error": "invalid_support_link"}, status=400, headers=headers)
@@ -772,6 +785,7 @@ async def handle_intake(request):
         bio = ""
         gumroad_mode = ""
         gumroad_handle = ""
+        other_payment_link = ""
         support_enabled = False
         support_link = ""
         support_text = ""
@@ -784,16 +798,16 @@ async def handle_intake(request):
             "(name, email, artist_name, tier, created_at, client_id, whatsapp, bio, spotify_url, "
             "main_color, accent_color, domain_primary, domain_backup, fan_alert_email, "
             "apple_music_url, youtube_url, amazon_music_url, facebook_url, x_url, tiktok_url, "
-            "instagram_url, audiomack_url, boomplay_url, gumroad_mode, gumroad_handle, "
+            "instagram_url, audiomack_url, boomplay_url, gumroad_mode, gumroad_handle, other_payment_link, "
             "support_enabled, support_link, support_text) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 artist_name, contact_email, artist_name, tier, created_at, client_id, whatsapp, bio, spotify_url,
                 main_color, accent_color, domain_primary, domain_backup, fan_alert_email,
                 platform_urls["apple_music_url"], platform_urls["youtube_url"], platform_urls["amazon_music_url"],
                 platform_urls["facebook_url"], platform_urls["x_url"], platform_urls["tiktok_url"],
                 platform_urls["instagram_url"], platform_urls["audiomack_url"], platform_urls["boomplay_url"],
-                gumroad_mode, gumroad_handle, int(support_enabled), support_link, support_text,
+                gumroad_mode, gumroad_handle, other_payment_link, int(support_enabled), support_link, support_text,
             ),
         )
         conn.commit()
@@ -815,6 +829,7 @@ async def handle_intake(request):
         "bio": bio,
         "gumroad_mode": gumroad_mode,
         "gumroad_handle": gumroad_handle,
+        "other_payment_link": other_payment_link,
         "support_enabled": support_enabled,
         "support_link": support_link,
         "support_text": support_text,

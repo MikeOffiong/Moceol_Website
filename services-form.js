@@ -281,17 +281,23 @@ function initTierToggle() {
 function initGumroadToggle() {
     var ownRadio = document.getElementById("gumroad-own");
     var setupRadio = document.getElementById("gumroad-setup");
-    var field = document.getElementById("gumroad-handle-field");
-    if (!ownRadio || !setupRadio || !field) {
+    var otherRadio = document.getElementById("gumroad-other");
+    var handleField = document.getElementById("gumroad-handle-field");
+    var otherField = document.getElementById("other-payment-link-field");
+    if (!ownRadio || !setupRadio || !otherRadio || !handleField || !otherField) {
         return;
     }
     function apply() {
         var showHandle = ownRadio.checked;
-        field.hidden = !showHandle;
+        var showOther = otherRadio.checked;
+        handleField.hidden = !showHandle;
+        otherField.hidden = !showOther;
         setRequired(["intake-gumroad-handle"], showHandle);
+        setRequired(["intake-other-payment-link"], showOther);
     }
     ownRadio.addEventListener("change", apply);
     setupRadio.addEventListener("change", apply);
+    otherRadio.addEventListener("change", apply);
 }
 
 function initSupportToggle() {
@@ -506,7 +512,7 @@ function initServicesForm() {
             platformValues[platformFields[i]] = value;
         }
 
-        var bio = "", gumroadMode = "", gumroadHandle = "", supportEnabled = false, supportLink = "", supportText = "";
+        var bio = "", gumroadMode = "", gumroadHandle = "", otherPaymentLink = "", supportEnabled = false, supportLink = "", supportText = "";
 
         if (isFull) {
             bio = document.getElementById("intake-bio").value.trim();
@@ -525,7 +531,7 @@ function initServicesForm() {
 
             var gumroadEl = form.querySelector('input[name="gumroad_mode"]:checked');
             if (!gumroadEl) {
-                showError("Please choose a Gumroad option.");
+                showError("Please choose where fans should buy or support you.");
                 return;
             }
             gumroadMode = gumroadEl.value;
@@ -533,6 +539,12 @@ function initServicesForm() {
                 gumroadHandle = document.getElementById("intake-gumroad-handle").value.trim();
                 if (!gumroadHandle) {
                     showError("Please fill in your Gumroad account.", document.getElementById("intake-gumroad-handle"));
+                    return;
+                }
+            } else if (gumroadMode === "other") {
+                otherPaymentLink = document.getElementById("intake-other-payment-link").value.trim();
+                if (!otherPaymentLink.startsWith("https://") || !URL_RE.test(otherPaymentLink)) {
+                    showError("Your payment link must start with https://", document.getElementById("intake-other-payment-link"));
                     return;
                 }
             }
@@ -575,6 +587,7 @@ function initServicesForm() {
             bio: bio,
             gumroad_mode: gumroadMode,
             gumroad_handle: gumroadHandle,
+            other_payment_link: otherPaymentLink,
             support_enabled: supportEnabled,
             support_link: supportLink,
             support_text: supportText
