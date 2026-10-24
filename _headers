@@ -1,0 +1,15 @@
+# Explicit Content-Type for the extensionless clean routes served via
+# _redirects rewrites (and for the .html file itself, belt-and-suspenders)
+# so they're never served as application/octet-stream and trigger a
+# browser download instead of rendering.
+/services
+  Content-Type: text/html; charset=UTF-8
+
+/services.html
+  Content-Type: text/html; charset=UTF-8
+
+/listen
+  Content-Type: text/html; charset=UTF-8
+
+/listen/*
+  Content-Type: text/html; charset=UTF-8
