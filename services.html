@@ -22,16 +22,16 @@
     <!-- TRACKING PIXELS GO HERE (Meta, Google Ads, Snapchat, etc.): paste additional pixel base code snippets here -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>A Website That's Actually Yours | Moceol</title>
-    <meta name="description" content="A personal artist website, built from one form and a preview you approve before you pay anything. No discovery call." />
+    <title>Your Music Deserves More Than a Linktree | Moceol</title>
+    <meta name="description" content="A website with a smart landing page that updates itself with every release, built for independent artists." />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="A Website That's Actually Yours | Moceol" />
-    <meta property="og:description" content="A personal artist website, built from one form and a preview you approve before you pay anything. No discovery call." />
+    <meta property="og:title" content="Your Music Deserves More Than a Linktree | Moceol" />
+    <meta property="og:description" content="A website with a smart landing page that updates itself with every release, built for independent artists." />
     <meta property="og:image" content="https://moceol.com/images/photo-4-web.jpg" />
     <meta property="og:url" content="https://moceol.com/services.html" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="A Website That's Actually Yours | Moceol" />
-    <meta name="twitter:description" content="A personal artist website, built from one form and a preview you approve before you pay anything. No discovery call." />
+    <meta name="twitter:title" content="Your Music Deserves More Than a Linktree | Moceol" />
+    <meta name="twitter:description" content="A website with a smart landing page that updates itself with every release, built for independent artists." />
     <meta name="twitter:image" content="https://moceol.com/images/photo-4-web.jpg" />
     <link rel="icon" href="favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32x32.png" />
@@ -49,10 +49,10 @@
 
     <main class="page-main services-page">
         <div class="services-hero">
-            <h1>A website that&rsquo;s actually yours</h1>
+            <h1>Your music deserves more than a Linktree.</h1>
             <p>
-                Tell me about your music once, see a preview built just for you,
-                and go live &mdash; no call required.
+                A website with a smart landing page that updates itself with
+                every release, built for independent artists.
             </p>
         </div>
 
@@ -68,6 +68,7 @@
 
         <div class="services-section-header">
             <h2>What to expect</h2>
+            <p>Tell me about your music once. See a preview built just for you. Go live.</p>
         </div>
         <div class="steps-row">
             <div class="step-card">
@@ -80,18 +81,18 @@
             </div>
             <div class="step-card">
                 <div class="step-number">3</div>
-                <p>Approve &amp; pay half to begin</p>
+                <p>Approve and pay a deposit</p>
             </div>
             <div class="step-card">
                 <div class="step-number">4</div>
-                <p>Pay the rest &amp; go live</p>
+                <p>Complete payment and go live</p>
             </div>
         </div>
 
         <div class="intake-section">
             <div class="services-section-header">
                 <h2>Tell me about you</h2>
-                <p>Everything below builds your preview directly &mdash; there&rsquo;s no follow-up call, so take a moment to fill it in fully.</p>
+                <p>Everything below builds your preview directly, so take a moment to fill it in fully.</p>
             </div>
 
             <div class="services-checklist">
@@ -100,7 +101,7 @@
                     <li>Your Spotify artist page link</li>
                     <li>A WhatsApp number we can reach you on</li>
                     <li>Two domain name ideas (your first choice and a backup)</li>
-                    <li>A main color for your brand</li>
+                    <li>A main color and an accent color for your brand</li>
                     <li>If you're going with a full website: a short bio and your photos</li>
                     <li>If you're going with a full website: your Gumroad account, if you already have one</li>
                 </ul>
@@ -136,9 +137,20 @@
                 <input type="url" id="intake-spotify" name="spotify_url" class="alerts-input" placeholder="https://open.spotify.com/artist/..." required />
                 <p class="field-hint">Used to detect your new releases automatically and shown as your Spotify icon.</p>
 
-                <label for="intake-color" class="alerts-label">Your main brand color</label>
-                <input type="color" id="intake-color" name="brand_color" class="alerts-input" value="#f2aa4c" required />
-                <p class="field-hint">This becomes your site's one accent color &mdash; buttons, links, highlights.</p>
+                <label for="intake-main-color" class="alerts-label">Main brand color</label>
+                <input type="color" id="intake-main-color" name="main_color" class="alerts-input" value="#003f42" required />
+                <p class="field-hint">This becomes your site's background.</p>
+
+                <label for="intake-accent-color" class="alerts-label">Accent color</label>
+                <input type="color" id="intake-accent-color" name="accent_color" class="alerts-input" value="#f2aa4c" required />
+                <p class="field-hint">Used for buttons, links, headings and highlights.</p>
+
+                <div class="color-preview" id="color-preview">
+                    <span id="color-preview-heading">Your Artist Name</span>
+                    <span id="color-preview-text">This is how your site's text will look.</span>
+                    <span id="color-preview-btn">BUTTON</span>
+                </div>
+                <p class="photo-warning" id="color-contrast-warning" hidden>These two colors are close in brightness and may be hard to tell apart &mdash; consider picking colors with more contrast between them.</p>
 
                 <label for="intake-domain-primary" class="alerts-label">Preferred domain name</label>
                 <input type="text" id="intake-domain-primary" name="domain_primary" class="alerts-input" placeholder="yourname.com" required />
@@ -275,16 +287,7 @@
             </form>
             <p class="alerts-success" id="intake-success" role="status" hidden>Got it &mdash; check your email soon for your preview.</p>
 
-            <p class="services-data-note">Your fans' data is yours alone &mdash; it's never mixed with another client's.</p>
-        </div>
-
-        <div class="services-platforms-row">
-            <span><i class="fa-brands fa-spotify"></i> Spotify</span>
-            <span><i class="fa-brands fa-itunes-note"></i> Apple Music</span>
-            <span><i class="fa-brands fa-youtube"></i> YouTube</span>
-            <span><i class="fa-brands fa-amazon"></i> Amazon Music</span>
-            <span>Audiomack</span>
-            <span>Boomplay</span>
+            <p class="services-data-note">Your fans' data is yours alone &mdash; it's never mixed with another artist's.</p>
         </div>
 
         <p class="services-proof-line" id="services-proof-line" hidden></p>

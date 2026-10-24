@@ -3,9 +3,18 @@
    ============================================ */
 
 :root {
-    --color-teal: #003f42;       /* base/background — sampled from photo-1's wall */
-    --color-teal-rgb: 0, 63, 66; /* same colour, components, for rgba() overlays */
-    --color-amber: #f2aa4c;      /* accent — nav links, buttons, heading accents */
+    /* Main/accent are the two colors a client picks on the services-page
+       form (main = background, accent = buttons/links/headings). Every
+       other variable below is driven off these two, so reskinning a future
+       client site is just overriding --color-main/--color-accent here -
+       moceol.com's own site keeps its teal/gold by leaving these as-is. */
+    --color-main: #003f42;    /* sampled from photo-1's wall */
+    --color-main-rgb: 0, 63, 66;
+    --color-accent: #f2aa4c;
+
+    --color-teal: var(--color-main);       /* base/background */
+    --color-teal-rgb: var(--color-main-rgb); /* same colour, components, for rgba() overlays */
+    --color-amber: var(--color-accent);    /* nav links, buttons, heading accents */
     --color-ink: #000000;        /* dark text on amber (e.g. solid buttons) */
     --color-white: #ffffff;
     --color-white-soft: rgba(255, 255, 255, 0.92);
@@ -1408,27 +1417,32 @@ a {
     margin-top: 6px;
 }
 
-.services-platforms-row {
+.color-preview {
+    max-width: 480px;
+    margin: 10px auto 0;
+    padding: 24px 20px;
+    border-radius: 12px;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 22px;
-    max-width: 720px;
-    margin: 0 auto 40px;
-}
-
-.services-platforms-row span {
-    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    color: var(--color-grey);
-    font-family: var(--font-body);
-    font-size: 13px;
+    gap: 14px;
+    transition: background-color 0.2s ease;
 }
 
-.services-platforms-row i {
-    color: var(--color-amber);
-    font-size: 16px;
+#color-preview-heading {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#color-preview-btn {
+    display: inline-block;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-family: var(--font-heading);
+    font-size: 12px;
+    letter-spacing: 1px;
+    font-weight: bold;
 }
 
 .services-proof-line {

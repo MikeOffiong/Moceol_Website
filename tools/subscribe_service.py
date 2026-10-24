@@ -280,7 +280,8 @@ def init_db():
         "whatsapp": "TEXT",
         "bio": "TEXT",
         "spotify_url": "TEXT",
-        "brand_color": "TEXT",
+        "main_color": "TEXT",
+        "accent_color": "TEXT",
         "domain_primary": "TEXT",
         "domain_backup": "TEXT",
         "fan_alert_email": "TEXT",
@@ -544,7 +545,8 @@ async def notify_client_of_new_inquiry(fields, created_at_iso):
         ("Contact email", fields["contact_email"]),
         ("WhatsApp", fields["whatsapp"]),
         ("Spotify", fields["spotify_url"]),
-        ("Brand color", fields["brand_color"]),
+        ("Main color", fields["main_color"]),
+        ("Accent color", fields["accent_color"]),
         ("Domain (preferred)", fields["domain_primary"]),
         ("Domain (backup)", fields["domain_backup"]),
         ("New-fan alert email", fields["fan_alert_email"]),
@@ -712,7 +714,8 @@ async def handle_intake(request):
     contact_email = field("contact_email", MAX_EMAIL_LEN).lower()
     whatsapp = field("whatsapp", MAX_WHATSAPP_LEN)
     spotify_url = field("spotify_url", MAX_URL_LEN)
-    brand_color = field("brand_color", 10)
+    main_color = field("main_color", 10)
+    accent_color = field("accent_color", 10)
     domain_primary = field("domain_primary", MAX_DOMAIN_LEN).lower()
     domain_backup = field("domain_backup", MAX_DOMAIN_LEN).lower()
     tier = field("tier", 10)
@@ -736,8 +739,10 @@ async def handle_intake(request):
         return web.json_response({"ok": False, "error": "invalid_whatsapp"}, status=400, headers=headers)
     if not URL_RE.match(spotify_url):
         return web.json_response({"ok": False, "error": "invalid_spotify_url"}, status=400, headers=headers)
-    if not COLOR_RE.match(brand_color):
-        return web.json_response({"ok": False, "error": "invalid_brand_color"}, status=400, headers=headers)
+    if not COLOR_RE.match(main_color):
+        return web.json_response({"ok": False, "error": "invalid_main_color"}, status=400, headers=headers)
+    if not COLOR_RE.match(accent_color):
+        return web.json_response({"ok": False, "error": "invalid_accent_color"}, status=400, headers=headers)
     if not DOMAIN_RE.match(domain_primary) or not DOMAIN_RE.match(domain_backup):
         return web.json_response({"ok": False, "error": "invalid_domain"}, status=400, headers=headers)
     if tier not in INTAKE_TIER_LABELS:
@@ -777,14 +782,14 @@ async def handle_intake(request):
         conn.execute(
             "INSERT INTO intake_submissions "
             "(name, email, artist_name, tier, created_at, client_id, whatsapp, bio, spotify_url, "
-            "brand_color, domain_primary, domain_backup, fan_alert_email, "
+            "main_color, accent_color, domain_primary, domain_backup, fan_alert_email, "
             "apple_music_url, youtube_url, amazon_music_url, facebook_url, x_url, tiktok_url, "
             "instagram_url, audiomack_url, boomplay_url, gumroad_mode, gumroad_handle, "
             "support_enabled, support_link, support_text) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 artist_name, contact_email, artist_name, tier, created_at, client_id, whatsapp, bio, spotify_url,
-                brand_color, domain_primary, domain_backup, fan_alert_email,
+                main_color, accent_color, domain_primary, domain_backup, fan_alert_email,
                 platform_urls["apple_music_url"], platform_urls["youtube_url"], platform_urls["amazon_music_url"],
                 platform_urls["facebook_url"], platform_urls["x_url"], platform_urls["tiktok_url"],
                 platform_urls["instagram_url"], platform_urls["audiomack_url"], platform_urls["boomplay_url"],
@@ -801,7 +806,8 @@ async def handle_intake(request):
         "contact_email": contact_email,
         "whatsapp": whatsapp,
         "spotify_url": spotify_url,
-        "brand_color": brand_color,
+        "main_color": main_color,
+        "accent_color": accent_color,
         "domain_primary": domain_primary,
         "domain_backup": domain_backup,
         "tier": tier,

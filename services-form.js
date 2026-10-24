@@ -331,6 +331,75 @@ function initProofLine() {
         .catch(function () {});
 }
 
+// ---------------------------------------------------------------------------
+// Color preview + contrast check - WCAG relative luminance, used both to
+// pick a readable text color for the live swatch (same math a future
+// generated site would use to auto-adjust its own text color against
+// whatever main color an artist picks) and to warn if the two picked
+// colors are too close in brightness to read well against each other.
+// ---------------------------------------------------------------------------
+function hexToRgb(hex) {
+    var clean = hex.replace("#", "");
+    return {
+        r: parseInt(clean.substr(0, 2), 16),
+        g: parseInt(clean.substr(2, 2), 16),
+        b: parseInt(clean.substr(4, 2), 16)
+    };
+}
+
+function relativeLuminance(rgb) {
+    function channel(c) {
+        var s = c / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    }
+    return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+}
+
+function contrastRatio(hex1, hex2) {
+    var l1 = relativeLuminance(hexToRgb(hex1));
+    var l2 = relativeLuminance(hexToRgb(hex2));
+    var lighter = Math.max(l1, l2);
+    var darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
+function readableTextColor(bgHex) {
+    return relativeLuminance(hexToRgb(bgHex)) > 0.179 ? "#000000" : "#ffffff";
+}
+
+function initColorPreview() {
+    var mainInput = document.getElementById("intake-main-color");
+    var accentInput = document.getElementById("intake-accent-color");
+    var preview = document.getElementById("color-preview");
+    var headingEl = document.getElementById("color-preview-heading");
+    var textEl = document.getElementById("color-preview-text");
+    var btnEl = document.getElementById("color-preview-btn");
+    var warningEl = document.getElementById("color-contrast-warning");
+    if (!mainInput || !accentInput || !preview) {
+        return;
+    }
+
+    function apply() {
+        var main = mainInput.value;
+        var accent = accentInput.value;
+
+        preview.style.backgroundColor = main;
+        headingEl.style.color = accent;
+        textEl.style.color = readableTextColor(main);
+        btnEl.style.backgroundColor = accent;
+        btnEl.style.color = readableTextColor(accent);
+
+        // Contrast between the two colors themselves (accent text/buttons
+        // shown against the main background) - warn under WCAG's 3:1
+        // minimum for large text / UI components.
+        warningEl.hidden = contrastRatio(main, accent) >= 3;
+    }
+
+    mainInput.addEventListener("input", apply);
+    accentInput.addEventListener("input", apply);
+    apply();
+}
+
 var URL_RE = /^https?:\/\/[^\s]+\.[^\s]+$/;
 var DOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i;
 var EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -347,6 +416,7 @@ function initServicesForm() {
     initPortraitUpload();
     initGalleryUpload();
     initProofLine();
+    initColorPreview();
 
     fireFunnelEvent("page_visit");
 
@@ -393,7 +463,8 @@ function initServicesForm() {
         var contactEmail = document.getElementById("intake-contact-email").value.trim();
         var whatsapp = document.getElementById("intake-whatsapp").value.trim();
         var spotifyUrl = document.getElementById("intake-spotify").value.trim();
-        var brandColor = document.getElementById("intake-color").value.trim();
+        var mainColor = document.getElementById("intake-main-color").value.trim();
+        var accentColor = document.getElementById("intake-accent-color").value.trim();
         var domainPrimary = document.getElementById("intake-domain-primary").value.trim();
         var domainBackup = document.getElementById("intake-domain-backup").value.trim();
         var fanAlertEmail = document.getElementById("intake-fan-alert-email").value.trim();
@@ -496,7 +567,8 @@ function initServicesForm() {
             contact_email: contactEmail,
             whatsapp: whatsapp,
             spotify_url: spotifyUrl,
-            brand_color: brandColor,
+            main_color: mainColor,
+            accent_color: accentColor,
             domain_primary: domainPrimary,
             domain_backup: domainBackup,
             fan_alert_email: fanAlertEmail,
