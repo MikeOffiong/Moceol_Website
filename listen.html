@@ -21,6 +21,14 @@
     </script>
     <!-- TRACKING PIXELS GO HERE (Meta, Google Ads, Snapchat, etc.): paste additional pixel base code snippets here -->
     <meta charset="UTF-8" />
+    <!-- This page is served at varying path depths (/listen, /listen/1,
+         /listen/2, ...) via a Cloudflare Pages rewrite, so every relative
+         URL on it - style.css, script.js, data/releases.js, image srcs set
+         dynamically by script.js, the logo link - needs to resolve against
+         the site root, not the current path. One <base> tag does that for
+         all of them, static and JS-set alike. Must come before any relative
+         URL reference below. -->
+    <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Listen | Moceol</title>
     <meta name="description" content="Listen to Moceol on Spotify, Apple Music and more — pick your platform." />
