@@ -5,6 +5,7 @@
 window.RELEASES = [
     {
         "slug": "clarity-of-mind",
+        "number": 17,
         "title": "Clarity of Mind",
         "coverUrl": "images/clarity-of-mind-og.jpg",
         "coverIsPlaceholder": false,
@@ -25,6 +26,7 @@ window.RELEASES = [
     },
     {
         "slug": "celebration",
+        "number": 16,
         "title": "Celebration",
         "coverUrl": "images/celebration-cover.jpg",
         "coverIsPlaceholder": false,
@@ -43,6 +45,7 @@ window.RELEASES = [
     },
     {
         "slug": "never-stop",
+        "number": 15,
         "title": "Never Stop",
         "coverUrl": "images/never-stop-cover.jpg",
         "coverIsPlaceholder": false,
@@ -60,6 +63,7 @@ window.RELEASES = [
     },
     {
         "slug": "got-you",
+        "number": 14,
         "title": "Got You",
         "coverUrl": "images/got-you-cover.jpg",
         "coverIsPlaceholder": false,
@@ -78,6 +82,7 @@ window.RELEASES = [
     },
     {
         "slug": "can-t-deny",
+        "number": 13,
         "title": "Can't Deny",
         "coverUrl": "images/can-t-deny-cover.jpg",
         "coverIsPlaceholder": false,
@@ -97,6 +102,7 @@ window.RELEASES = [
     },
     {
         "slug": "all-a-dream",
+        "number": 12,
         "title": "All A Dream",
         "coverUrl": "images/all-a-dream-cover.jpg",
         "coverIsPlaceholder": false,
@@ -115,6 +121,7 @@ window.RELEASES = [
     },
     {
         "slug": "into-you",
+        "number": 11,
         "title": "Into You",
         "coverUrl": "images/into-you-cover.jpg",
         "coverIsPlaceholder": false,
@@ -134,6 +141,7 @@ window.RELEASES = [
     },
     {
         "slug": "hit-the-road",
+        "number": 10,
         "title": "Hit The Road",
         "coverUrl": "images/hit-the-road-cover.jpg",
         "coverIsPlaceholder": false,
@@ -151,6 +159,7 @@ window.RELEASES = [
     },
     {
         "slug": "lavish",
+        "number": 9,
         "title": "Lavish",
         "coverUrl": "images/lavish-cover.jpg",
         "coverIsPlaceholder": false,
@@ -170,6 +179,7 @@ window.RELEASES = [
     },
     {
         "slug": "tuesday",
+        "number": 8,
         "title": "Tuesday",
         "coverUrl": "images/tuesday-cover.jpg",
         "coverIsPlaceholder": false,
@@ -188,6 +198,7 @@ window.RELEASES = [
     },
     {
         "slug": "top-of-my-throne",
+        "number": 7,
         "title": "Top of my Throne",
         "coverUrl": "images/top-of-my-throne-cover.jpg",
         "coverIsPlaceholder": false,
@@ -206,6 +217,7 @@ window.RELEASES = [
     },
     {
         "slug": "only-human",
+        "number": 6,
         "title": "Only Human",
         "coverUrl": "images/only-human-cover.jpg",
         "coverIsPlaceholder": false,
@@ -224,6 +236,7 @@ window.RELEASES = [
     },
     {
         "slug": "can-t-tell-me-nothing",
+        "number": 5,
         "title": "Can't Tell Me Nothing",
         "coverUrl": "images/can-t-tell-me-nothing-cover.jpg",
         "coverIsPlaceholder": false,
@@ -242,6 +255,7 @@ window.RELEASES = [
     },
     {
         "slug": "okriks",
+        "number": 4,
         "title": "Okriks",
         "coverUrl": "images/okriks-cover.jpg",
         "coverIsPlaceholder": false,
@@ -260,6 +274,7 @@ window.RELEASES = [
     },
     {
         "slug": "it-pays",
+        "number": 3,
         "title": "It Pays",
         "coverUrl": "images/it-pays-cover.jpg",
         "coverIsPlaceholder": false,
@@ -279,6 +294,7 @@ window.RELEASES = [
     },
     {
         "slug": "butterfly-effect",
+        "number": 1,
         "title": "Butterfly Effect",
         "coverUrl": "images/butterfly-effect-cover.jpg",
         "coverIsPlaceholder": false,
@@ -298,6 +314,7 @@ window.RELEASES = [
     },
     {
         "slug": "famous",
+        "number": 2,
         "title": "Famous",
         "coverUrl": "images/famous-cover.jpg",
         "coverIsPlaceholder": false,

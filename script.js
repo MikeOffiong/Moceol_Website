@@ -218,7 +218,7 @@ function initHero() {
         subtitleEl.textContent = featured.title;
     }
     if (streamBtn) {
-        streamBtn.href = "listen.html";
+        streamBtn.href = "listen";
         wireClickTracking(streamBtn, "ClickButton", { button: "stream_now", release: featured.slug });
     }
     if (ownBtn) {
@@ -249,7 +249,9 @@ function initTrackStreamButtons() {
         btn.className = "btn track-stream-btn";
         btn.textContent = "STREAM NOW";
 
-        if (release) {
+        if (release && release.number) {
+            btn.href = "listen/" + release.number;
+        } else if (release) {
             btn.href = "listen.html?r=" + encodeURIComponent(release.slug);
         } else {
             btn.href = "listen.html?track=" + encodeURIComponent(trackId);
@@ -272,7 +274,14 @@ function initListenPage() {
     var slug = params.get("r");
     var trackParam = params.get("track");
 
-    var release = (slug && releases.find(function (r) { return r.slug === slug; })) || null;
+    var pathMatch = window.location.pathname.match(/\/listen\/(\d+)\/?$/);
+    var number = pathMatch ? parseInt(pathMatch[1], 10) : null;
+
+    var release = (number && releases.find(function (r) { return r.number === number; })) || null;
+
+    if (!release && slug) {
+        release = releases.find(function (r) { return r.slug === slug; }) || null;
+    }
 
     if (!release && trackParam) {
         release = {
@@ -658,6 +667,10 @@ function throttledAdjustFloatingAlerts() {
 }
 
 function initDropAlerts() {
+    if (document.querySelector(".services-page")) {
+        return;
+    }
+
     buildAlertsModal();
 
     if (document.querySelector(".listen-main")) {
@@ -697,6 +710,10 @@ function initDropAlerts() {
     window.addEventListener("resize", throttledAdjustFloatingAlerts);
 }
 
+// services.html's form is a page-specific amount of logic (tiers, photo
+// uploads, the live-count line) that lives in services-form.js instead of
+// bloating this shared file - see that file's initServicesForm().
+
 document.addEventListener("DOMContentLoaded", function () {
     renderFooter();
 
@@ -710,6 +727,9 @@ document.addEventListener("DOMContentLoaded", function () {
     initListenPage();
     initShopGrid();
     initDropAlerts();
+    if (typeof initServicesForm === "function") {
+        initServicesForm();
+    }
 
     var hamburger = document.querySelector(".hamburger");
     var navLinks = document.querySelector(".nav-links");

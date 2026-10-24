@@ -595,8 +595,15 @@ def apply_release_to_site(pending, platforms):
     for r in releases:
         r["featured"] = False
 
+    existing_idx = next((i for i, r in enumerate(releases) if r["slug"] == slug), None)
+    if existing_idx is not None:
+        number = releases[existing_idx].get("number") or (max((r.get("number") or 0) for r in releases) + 1)
+    else:
+        number = max((r.get("number") or 0) for r in releases) + 1 if releases else 1
+
     new_release = {
         "slug": slug,
+        "number": number,
         "title": pending["title"],
         "coverUrl": cover_url or "",
         "coverIsPlaceholder": cover_url is None,
@@ -606,7 +613,6 @@ def apply_release_to_site(pending, platforms):
         "featured": True,
     }
 
-    existing_idx = next((i for i, r in enumerate(releases) if r["slug"] == slug), None)
     if existing_idx is not None:
         releases[existing_idx] = new_release
     else:
@@ -621,7 +627,7 @@ def apply_release_to_site(pending, platforms):
     subprocess.run(["git", "commit", "-m", commit_msg], cwd=REPO_PATH, check=True)
     subprocess.run(["git", "push", "origin", "main"], cwd=REPO_PATH, check=True)
 
-    return slug
+    return slug, number
 
 
 # ---------------------------------------------------------------------------
@@ -681,11 +687,11 @@ def finalize_and_publish(artist, pending):
 
     if artist["site_target"] == "moceol_website":
         refresh_repo()
-        slug = apply_release_to_site(pending, platforms)
+        slug, number = apply_release_to_site(pending, platforms)
         send_telegram(
             OWNER_USER_ID,
             f"<b>Published:</b> {html.escape(pending['title'])}\n"
-            f"Live now: https://moceol.com/listen.html?r={html.escape(slug)}",
+            f"Live now, ready to copy to the client: https://moceol.com/listen/{number}",
         )
     else:
         send_telegram(OWNER_USER_ID, f"strms.link published for {html.escape(pending['title'])}, but no site-publish handler exists yet for this artist.")

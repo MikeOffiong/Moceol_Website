@@ -10,7 +10,7 @@ to source anything first.
     /root/venv/bin/python3 /root/send_announcement.py \\
         --release-key clarity-of-mind \\
         --title "Clarity of Mind" \\
-        --link "https://moceol.com/listen.html?r=clarity-of-mind" \\
+        --link "https://moceol.com/listen/17" \\
         --message "New one just dropped - give it a listen!" \\
         --cover-url "https://moceol.com/images/clarity-of-mind-cover.jpg"
 

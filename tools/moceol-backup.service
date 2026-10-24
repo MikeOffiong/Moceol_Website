@@ -1,0 +1,10 @@
+[Unit]
+Description=Moceol daily subscriber/events DB backup to cloud storage
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root
+ExecStart=/root/venv/bin/python3 /root/backup_db.py
+EnvironmentFile=/root/moceol_subscribe.env
+StandardOutput=append:/root/backup.log
+StandardError=append:/root/backup.log

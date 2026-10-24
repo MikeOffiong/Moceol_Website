@@ -482,8 +482,15 @@ async function main() {
             r.featured = false;
         });
 
+        const existingIndex = releases.findIndex((r) => r.slug === slug);
+        const highestNumber = releases.reduce((max, r) => Math.max(max, r.number || 0), 0);
+        const number = existingIndex !== -1 && releases[existingIndex].number
+            ? releases[existingIndex].number
+            : highestNumber + 1;
+
         const newRelease = {
             slug,
+            number,
             title: trackInfo.title,
             coverUrl,
             coverIsPlaceholder,
@@ -494,7 +501,6 @@ async function main() {
             featured: true
         };
 
-        const existingIndex = releases.findIndex((r) => r.slug === slug);
         if (existingIndex !== -1) {
             releases[existingIndex] = newRelease;
         } else {
@@ -505,6 +511,7 @@ async function main() {
 
         console.log("\nDone.");
         console.log("Featured release is now: " + trackInfo.title);
+        console.log("Permanent link: https://moceol.com/listen/" + number);
         console.log("Platforms saved: " + Object.keys(reviewed).sort().join(", "));
         console.log("Cover: " + coverUrl);
         if (previousFeaturedTitle) {
