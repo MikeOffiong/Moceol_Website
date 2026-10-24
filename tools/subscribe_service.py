@@ -169,6 +169,11 @@ MAX_SUBMISSIONS_PER_WHATSAPP = int(os.environ.get("MAX_SUBMISSIONS_PER_WHATSAPP"
 MAX_SUBMISSIONS_PER_IP = int(os.environ.get("MAX_SUBMISSIONS_PER_IP", "10"))
 SPOTIFY_ARTIST_LINK_RE = re.compile(r"artist[/:][a-zA-Z0-9]+")
 
+# --- Owner dashboard: long unguessable URL is the only auth, no login.
+# Generated once and persisted in the env file (not regenerated per
+# restart, so the bookmarked link keeps working). ---
+DASHBOARD_TOKEN = os.environ.get("DASHBOARD_TOKEN", "")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -1191,6 +1196,192 @@ async def handle_intake_photos(request):
     )
 
 
+DASHBOARD_WINDOW_DAYS = 30
+
+
+def _dashboard_rows(conn):
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=DASHBOARD_WINDOW_DAYS)).isoformat()
+
+    visits_by_day = conn.execute(
+        "SELECT substr(created_at, 1, 10) AS day, COUNT(DISTINCT client_id) AS n FROM events "
+        "WHERE event_type = 'page_visit' AND created_at >= ? GROUP BY day ORDER BY day",
+        (cutoff,),
+    ).fetchall()
+
+    devices = conn.execute(
+        "SELECT device_type, COUNT(DISTINCT client_id) AS n FROM events "
+        "WHERE event_type = 'page_visit' AND created_at >= ? AND device_type != '' "
+        "GROUP BY device_type ORDER BY n DESC",
+        (cutoff,),
+    ).fetchall()
+
+    cities = conn.execute(
+        "SELECT city, COUNT(DISTINCT client_id) AS n FROM events "
+        "WHERE event_type = 'page_visit' AND created_at >= ? AND city != '' "
+        "GROUP BY city ORDER BY n DESC LIMIT 8",
+        (cutoff,),
+    ).fetchall()
+
+    sources = conn.execute(
+        "SELECT traffic_source, COUNT(DISTINCT client_id) AS n FROM events "
+        "WHERE event_type = 'page_visit' AND created_at >= ? AND traffic_source != '' "
+        "GROUP BY traffic_source ORDER BY n DESC LIMIT 8",
+        (cutoff,),
+    ).fetchall()
+
+    def funnel_count(event_type):
+        return conn.execute(
+            "SELECT COUNT(DISTINCT client_id) FROM events WHERE event_type = ? AND created_at >= ?",
+            (event_type, cutoff),
+        ).fetchone()[0]
+
+    funnel = {
+        "visited": funnel_count("page_visit"),
+        "started": funnel_count("form_started"),
+        "submitted": funnel_count("form_submitted"),
+    }
+
+    submissions = conn.execute(
+        "SELECT artist_name, tier, email, created_at FROM intake_submissions "
+        "ORDER BY created_at DESC LIMIT 20"
+    ).fetchall()
+
+    return visits_by_day, devices, cities, sources, funnel, submissions
+
+
+def _dashboard_bar_chart(rows, max_label_len=14):
+    if not rows:
+        return '<p class="empty">No data yet.</p>'
+    max_n = max(n for _, n in rows) or 1
+    bars = "".join(
+        f'<div class="bar-row"><span class="bar-label">{html.escape(str(label)[:max_label_len])}</span>'
+        f'<div class="bar-track"><div class="bar-fill" style="width:{max(4, round(n / max_n * 100))}%"></div></div>'
+        f'<span class="bar-value">{n}</span></div>'
+        for label, n in rows
+    )
+    return f'<div class="bar-chart">{bars}</div>'
+
+
+DASHBOARD_PAGE_TEMPLATE = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Dashboard | Moceol</title>
+<style>
+  body {{ background:#003f42; color:#fff; font-family:Tahoma,Geneva,sans-serif;
+    margin:0; padding:20px 16px 60px; }}
+  h1 {{ color:#f2aa4c; font-family:Helvetica,Arial,sans-serif; font-size:22px; margin:0 0 4px; }}
+  .subtitle {{ color:rgb(190,188,188); font-size:12px; margin:0 0 24px; }}
+  .card {{ background:rgba(255,255,255,0.04); border:1px solid rgba(242,170,76,0.2);
+    border-radius:10px; padding:16px; margin-bottom:16px; max-width:640px; }}
+  .card h2 {{ color:#f2aa4c; font-family:Helvetica,Arial,sans-serif; font-size:15px; margin:0 0 12px; }}
+  .empty {{ color:rgb(190,188,188); font-size:13px; margin:0; }}
+  .bar-chart {{ display:flex; flex-direction:column; gap:6px; }}
+  .bar-row {{ display:flex; align-items:center; gap:8px; font-size:12px; }}
+  .bar-label {{ width:90px; flex-shrink:0; color:rgb(190,188,188); overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }}
+  .bar-track {{ flex:1; background:rgba(255,255,255,0.08); border-radius:4px; height:14px; overflow:hidden; }}
+  .bar-fill {{ background:#f2aa4c; height:100%; border-radius:4px; }}
+  .bar-value {{ width:28px; text-align:right; flex-shrink:0; }}
+  .funnel {{ display:flex; justify-content:space-between; text-align:center; gap:8px; flex-wrap:wrap; }}
+  .funnel div {{ flex:1; min-width:80px; }}
+  .funnel .n {{ font-size:22px; font-weight:bold; color:#f2aa4c; }}
+  .funnel .label {{ font-size:11px; color:rgb(190,188,188); }}
+  table {{ width:100%; border-collapse:collapse; font-size:12px; }}
+  th, td {{ text-align:left; padding:6px 4px; border-bottom:1px solid rgba(255,255,255,0.08); }}
+  th {{ color:rgb(190,188,188); font-weight:normal; }}
+  .daychart {{ display:flex; align-items:flex-end; gap:2px; height:60px; }}
+  .daychart .col {{ flex:1; background:#f2aa4c; border-radius:2px 2px 0 0; min-height:2px; }}
+</style></head>
+<body>
+<h1>Moceol Dashboard</h1>
+<p class="subtitle">Last {window_days} days &middot; generated {generated_at}</p>
+
+<div class="card">
+  <h2>Visits over time</h2>
+  {day_chart}
+</div>
+
+<div class="card">
+  <h2>Funnel</h2>
+  <div class="funnel">
+    <div><div class="n">{visited}</div><div class="label">VISITED</div></div>
+    <div><div class="n">{started}</div><div class="label">STARTED</div></div>
+    <div><div class="n">{submitted}</div><div class="label">SUBMITTED</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Devices</h2>
+  {devices_chart}
+</div>
+
+<div class="card">
+  <h2>Top cities</h2>
+  {cities_chart}
+</div>
+
+<div class="card">
+  <h2>Top traffic sources</h2>
+  {sources_chart}
+</div>
+
+<div class="card">
+  <h2>Recent submissions</h2>
+  {submissions_table}
+</div>
+</body></html>"""
+
+
+def _dashboard_day_chart(visits_by_day):
+    if not visits_by_day:
+        return '<p class="empty">No visits yet.</p>'
+    max_n = max(n for _, n in visits_by_day) or 1
+    cols = "".join(
+        f'<div class="col" style="height:{max(4, round(n / max_n * 100))}%" title="{html.escape(day)}: {n}"></div>'
+        for day, n in visits_by_day
+    )
+    return f'<div class="daychart">{cols}</div>'
+
+
+def _dashboard_submissions_table(submissions):
+    if not submissions:
+        return '<p class="empty">No submissions yet.</p>'
+    rows_html = "".join(
+        f"<tr><td>{html.escape(artist_name)}</td><td>{html.escape(INTAKE_TIER_LABELS.get(tier, tier or ''))}</td>"
+        f"<td>{html.escape(email)}</td><td>{html.escape(created_at[:10])}</td></tr>"
+        for artist_name, tier, email, created_at in submissions
+    )
+    return (
+        "<table><tr><th>Artist</th><th>Tier</th><th>Email</th><th>Date</th></tr>"
+        f"{rows_html}</table>"
+    )
+
+
+async def handle_dashboard(request):
+    token = request.match_info.get("token", "")
+    if not DASHBOARD_TOKEN or token != DASHBOARD_TOKEN:
+        return web.Response(status=404, text="Not found")
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        visits_by_day, devices, cities, sources, funnel, submissions = _dashboard_rows(conn)
+    finally:
+        conn.close()
+
+    page = DASHBOARD_PAGE_TEMPLATE.format(
+        window_days=DASHBOARD_WINDOW_DAYS,
+        generated_at=datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC"),
+        day_chart=_dashboard_day_chart(visits_by_day),
+        visited=funnel["visited"], started=funnel["started"], submitted=funnel["submitted"],
+        devices_chart=_dashboard_bar_chart(devices),
+        cities_chart=_dashboard_bar_chart(cities),
+        sources_chart=_dashboard_bar_chart(sources),
+        submissions_table=_dashboard_submissions_table(submissions),
+    )
+    return web.Response(text=page, content_type="text/html", headers={"X-Robots-Tag": "noindex, nofollow"})
+
+
 async def handle_live_count(request):
     headers = _cors_headers(request)
     conn = sqlite3.connect(DB_PATH)
@@ -1386,6 +1577,7 @@ def main():
     app.router.add_post("/event", handle_event)
     app.router.add_options("/event", handle_options)
     app.router.add_get("/live-count", handle_live_count)
+    app.router.add_get("/dashboard/{token}", handle_dashboard)
     app.router.add_post("/preview/{token}/refresh", handle_preview_refresh)
     app.router.add_options("/preview/{token}/refresh", handle_options)
     app.router.add_get("/preview/{token}", handle_preview)
