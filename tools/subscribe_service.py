@@ -66,11 +66,12 @@ import re
 import secrets
 import sqlite3
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import aiohttp
 from aiohttp import web
 
+import preview_builder
 from email_brand import (
     ARTIST_ACCENT,
     ARTIST_BG,
@@ -144,9 +145,18 @@ CLIENT_NOTIFY_EMAIL = os.environ.get("CLIENT_NOTIFY_EMAIL", "moceol.ent@gmail.co
 TELEGRAM_NOTIFY_BOT_TOKEN = os.environ.get("TELEGRAM_NOTIFY_BOT_TOKEN", "")
 TELEGRAM_NOTIFY_CHAT_ID = os.environ.get("TELEGRAM_NOTIFY_CHAT_ID", "")
 
-EVENT_TYPES = {"page_visit", "video_played", "form_started", "form_submitted"}
+EVENT_TYPES = {
+    "page_visit", "video_played", "form_started", "form_submitted",
+    "preview_created", "preview_opened", "preview_expired",
+    "preview_refresh_requested", "preview_refresh_limit_reached",
+}
 MAX_EVENT_EXTRA_LEN = 500
 EVENT_RATE_LIMIT_MAX = int(os.environ.get("EVENT_RATE_LIMIT_MAX", "40"))
+
+# --- Stage A: automatic preview (see preview_builder.py) ---
+PREVIEWS_DIR = os.environ.get("PREVIEWS_DIR", "/root/moceol_previews")
+PREVIEW_HOURS = 24
+PREVIEW_PUBLIC_BASE = os.environ.get("PREVIEW_PUBLIC_BASE", "https://api.moceol.com/preview")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -318,6 +328,25 @@ def init_db():
         )
         """
     )
+
+    # Stage A automatic previews. is_refresh marks the (at most one) refresh
+    # generated for a submission; COUNT(*) WHERE submission_id = ? is how the
+    # one-refresh-per-submission cap and the expired-state message are
+    # decided - never a separate counter column to keep in sync.
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS previews (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            submission_id INTEGER NOT NULL,
+            token TEXT NOT NULL UNIQUE,
+            tier TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            is_refresh INTEGER NOT NULL DEFAULT 0
+        )
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_previews_submission ON previews(submission_id)")
 
     # Append-only funnel event log - page_visit, video_played, form_started,
     # form_submitted. Nothing in this codebase ever UPDATEs or DELETEs a row
@@ -615,6 +644,82 @@ UNSUBSCRIBE_PAGE = """<!DOCTYPE html>
 </div></body></html>"""
 
 
+PREVIEW_EXPIRED_REFRESH_PAGE = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Preview Expired | Moceol</title>
+<style>
+  body { background:#003f42; color:#fff; font-family:Tahoma,Geneva,sans-serif;
+    display:flex; align-items:center; justify-content:center; min-height:100vh;
+    margin:0; padding:24px; text-align:center; }
+  .card { max-width:420px; }
+  h1 { color:#f2aa4c; font-family:Helvetica,Arial,sans-serif; font-size:24px; margin-bottom:14px; }
+  p { color:rgb(190,188,188); line-height:1.5; margin-bottom:20px; }
+  button { background:#f2aa4c; color:#000; border:none; border-radius:6px; padding:12px 22px;
+    font-family:Helvetica,Arial,sans-serif; font-weight:bold; font-size:14px; cursor:pointer; }
+  button:disabled { opacity:0.6; cursor:default; }
+  .err { color:#ff8a8a; font-size:13px; margin-top:14px; }
+</style></head>
+<body><div class="card">
+<h1>This preview has expired.</h1>
+<p>Previews stay live for 24 hours. You get one fresh link - request it below.</p>
+<button id="refresh-btn" type="button">Request a new preview</button>
+<p class="err" id="refresh-err" hidden></p>
+</div>
+<script>
+document.getElementById("refresh-btn").addEventListener("click", function () {
+  var btn = this;
+  btn.disabled = true;
+  btn.textContent = "Building your new preview...";
+  fetch(window.location.pathname.replace(/\\/$/, "") + "/refresh", { method: "POST" })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data && data.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        document.getElementById("refresh-err").textContent = "That didn't work - please try again, or email moceol.ent@gmail.com.";
+        document.getElementById("refresh-err").hidden = false;
+        btn.disabled = false;
+        btn.textContent = "Request a new preview";
+      }
+    })
+    .catch(function () {
+      document.getElementById("refresh-err").textContent = "That didn't work - please try again, or email moceol.ent@gmail.com.";
+      document.getElementById("refresh-err").hidden = false;
+      btn.disabled = false;
+      btn.textContent = "Request a new preview";
+    });
+});
+</script>
+</body></html>"""
+
+PREVIEW_SUPPORT_REACHOUT_PAGE = """<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Preview Expired | Moceol</title>
+<style>
+  body { background:#003f42; color:#fff; font-family:Tahoma,Geneva,sans-serif;
+    display:flex; align-items:center; justify-content:center; min-height:100vh;
+    margin:0; padding:24px; text-align:center; }
+  .card { max-width:420px; }
+  h1 { color:#f2aa4c; font-family:Helvetica,Arial,sans-serif; font-size:24px; margin-bottom:14px; }
+  p { color:rgb(190,188,188); line-height:1.5; margin-bottom:20px; }
+  .icons { display:flex; justify-content:center; gap:22px; }
+  .icons a { display:flex; align-items:center; justify-content:center; width:52px; height:52px;
+    border-radius:50%; border:1px solid #f2aa4c; color:#f2aa4c; text-decoration:none; font-size:22px; }
+</style></head>
+<body><div class="card">
+<h1>Your preview has expired.</h1>
+<p>Reach out to support to get started.</p>
+<div class="icons">
+  <a href="mailto:moceol.ent@gmail.com" aria-label="Email">&#9993;</a>
+  <a href="https://wa.me/447729885183" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">&#9742;</a>
+</div>
+</div></body></html>"""
+
+
 def _cors_headers(request):
     origin = request.headers.get("Origin", "")
     if origin in ALLOWED_ORIGINS:
@@ -693,6 +798,111 @@ async def handle_subscribe(request):
         fire_and_forget(send_fan_welcome_email(email, first_name, token))
 
     return web.json_response({"ok": True}, headers=headers)
+
+
+# ---------------------------------------------------------------------------
+# Stage A: automatic preview generation
+# ---------------------------------------------------------------------------
+def _log_event_sync(conn, client_id, event_type, page="", extra=""):
+    """Server-side event insert for preview lifecycle events - no geo/device
+    lookup (these aren't always tied to a fresh incoming request the way
+    the public /event endpoint's page_visit etc. are)."""
+    conn.execute(
+        "INSERT INTO events (client_id, event_type, page, created_at, country, city, device_type, traffic_source, extra) "
+        "VALUES (?, ?, ?, ?, '', '', '', '', ?)",
+        (client_id, event_type, page, datetime.now(timezone.utc).isoformat(), extra[:MAX_EVENT_EXTRA_LEN]),
+    )
+
+
+def _submission_row_to_fields(row):
+    """row is a sqlite3.Row from intake_submissions - reshapes it into the
+    flat dict preview_builder.build_preview_files() expects, the same shape
+    handle_intake() already builds fresh at submission time."""
+    return {
+        "artist_name": row["artist_name"],
+        "tier": row["tier"],
+        "main_color": row["main_color"] or "#003f42",
+        "accent_color": row["accent_color"] or "#f2aa4c",
+        "spotify_url": row["spotify_url"] or "",
+        "apple_music_url": row["apple_music_url"] or "",
+        "youtube_url": row["youtube_url"] or "",
+        "amazon_music_url": row["amazon_music_url"] or "",
+        "facebook_url": row["facebook_url"] or "",
+        "x_url": row["x_url"] or "",
+        "tiktok_url": row["tiktok_url"] or "",
+        "instagram_url": row["instagram_url"] or "",
+        "audiomack_url": row["audiomack_url"] or "",
+        "boomplay_url": row["boomplay_url"] or "",
+        "bio": row["bio"] or "",
+        "gumroad_mode": row["gumroad_mode"] or "",
+        "gumroad_handle": row["gumroad_handle"] or "",
+        "other_payment_link": row["other_payment_link"] or "",
+        "support_enabled": bool(row["support_enabled"]),
+        "support_link": row["support_link"] or "",
+        "support_text": row["support_text"] or "",
+    }
+
+
+async def generate_preview(submission_id, client_id, fields, is_refresh=False):
+    """Runs the (blocking, network-calling) preview builder off the event
+    loop, writes the previews row, and logs preview_created. Returns the
+    full preview URL. Never raises - a failure here must not break the
+    submission or refresh request that triggered it; it logs and returns
+    None instead."""
+    token = secrets.token_urlsafe(32)
+    out_dir = os.path.join(PREVIEWS_DIR, token)
+    try:
+        loop = asyncio.get_event_loop()
+        warnings = await loop.run_in_executor(
+            None, preview_builder.build_preview_files, out_dir, token, fields, client_id
+        )
+        if warnings:
+            log.info("Preview %s built with warnings: %s", token, "; ".join(warnings))
+    except Exception as e:
+        log.error("Preview generation failed for submission %s: %s", submission_id, e)
+        return None
+
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(hours=PREVIEW_HOURS)
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute(
+            "INSERT INTO previews (submission_id, token, tier, created_at, expires_at, is_refresh) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (submission_id, token, fields["tier"], now.isoformat(), expires_at.isoformat(), int(is_refresh)),
+        )
+        _log_event_sync(conn, client_id, "preview_created", extra="refresh" if is_refresh else "original")
+        conn.commit()
+    finally:
+        conn.close()
+
+    return f"{PREVIEW_PUBLIC_BASE}/{token}"
+
+
+async def send_preview_email(artist_name, contact_email, preview_url):
+    subject = f"Your preview is ready, {artist_name}"
+    text_body = (
+        f"Hey {artist_name},\n\n"
+        "Here's your private preview, built from what you just sent:\n"
+        f"{preview_url}\n\n"
+        "This link is just for you - it's private and expires in 24 hours. "
+        "If it expires, there's a button on that page to request one fresh "
+        "link (good for another 24 hours).\n\n"
+        f"Talk soon,\n{ARTIST_NAME}"
+    )
+    body_html = (
+        f'<p style="margin:0 0 16px;">Hey {html.escape(artist_name)},</p>'
+        '<p style="margin:0 0 20px;">Here&rsquo;s your private preview, built from what you just sent:</p>'
+        f'<p style="margin:0 0 20px;"><a href="{html.escape(preview_url)}" '
+        f'style="color:{PLATFORM_ACCENT};">{html.escape(preview_url)}</a></p>'
+        '<p style="margin:0;">This link is just for you - it&rsquo;s private and expires in 24 hours. '
+        "If it expires, there&rsquo;s a button on that page to request one fresh link "
+        "(good for another 24 hours).</p>"
+    )
+    html_body = render_email_html(body_html, build_artist_footer(), PLATFORM_BG, PLATFORM_CARD_BG, PLATFORM_ACCENT)
+    ok = await send_email(contact_email, subject, html_body, text_body)
+    if not ok:
+        log.error("Preview email failed to send")
 
 
 async def handle_intake(request):
@@ -811,6 +1021,7 @@ async def handle_intake(request):
             ),
         )
         conn.commit()
+        submission_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         log.info("New intake submission accepted (tier=%s)", tier)
     finally:
         conn.close()
@@ -841,7 +1052,11 @@ async def handle_intake(request):
         f"\U0001F4EC New services inquiry\n<b>{html.escape(artist_name)}</b> ({html.escape(tier_label)})"
     ))
 
-    return web.json_response({"ok": True}, headers=headers)
+    preview_url = await generate_preview(submission_id, client_id, fields, is_refresh=False)
+    if preview_url:
+        fire_and_forget(send_preview_email(artist_name, contact_email, preview_url))
+
+    return web.json_response({"ok": True, "preview_url": preview_url}, headers=headers)
 
 
 def _sniff_image_ext(head_bytes):
@@ -987,6 +1202,117 @@ async def handle_event(request):
     return web.json_response({"ok": True}, headers=headers)
 
 
+def _preview_row_and_submission(conn, token):
+    row = conn.execute(
+        "SELECT id, submission_id, tier, created_at, expires_at FROM previews WHERE token = ?", (token,)
+    ).fetchone()
+    if not row:
+        return None, None
+    conn.row_factory = sqlite3.Row
+    sub = conn.execute(
+        "SELECT * FROM intake_submissions WHERE id = ?", (row[1],)
+    ).fetchone()
+    return row, sub
+
+
+async def handle_preview(request):
+    token = request.match_info.get("token", "")
+    sub_path = request.match_info.get("path", "").lstrip("/")
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        preview_row, submission = _preview_row_and_submission(conn, token)
+        if not preview_row or not submission:
+            return web.Response(status=404, text="Not found")
+
+        _, submission_id, tier, _, expires_at = preview_row
+        client_id = submission["client_id"] or ""
+        artist_name = submission["artist_name"] or ""
+        now = datetime.now(timezone.utc)
+        expires_dt = datetime.fromisoformat(expires_at)
+
+        if now > expires_dt:
+            total_previews = conn.execute(
+                "SELECT COUNT(*) FROM previews WHERE submission_id = ?", (submission_id,)
+            ).fetchone()[0]
+            if total_previews < 2:
+                _log_event_sync(conn, client_id, "preview_expired", extra=token)
+                conn.commit()
+                return web.Response(text=PREVIEW_EXPIRED_REFRESH_PAGE, content_type="text/html",
+                                     headers={"X-Robots-Tag": "noindex, nofollow"})
+            else:
+                _log_event_sync(conn, client_id, "preview_refresh_limit_reached", extra=token)
+                conn.commit()
+                fire_and_forget(send_telegram_notification(
+                    f"\U0001F6D1 <b>{html.escape(artist_name)}</b> hit their expired preview with no refreshes left."
+                ))
+                return web.Response(text=PREVIEW_SUPPORT_REACHOUT_PAGE, content_type="text/html",
+                                     headers={"X-Robots-Tag": "noindex, nofollow"})
+
+        preview_dir = os.path.abspath(os.path.join(PREVIEWS_DIR, token))
+        default_file = "index.html" if tier == "full" else "listen.html"
+        file_path = sub_path or default_file
+        full_path = os.path.abspath(os.path.join(preview_dir, file_path))
+
+        if not full_path.startswith(preview_dir + os.sep) and full_path != preview_dir:
+            return web.Response(status=404, text="Not found")
+        if not os.path.isfile(full_path):
+            return web.Response(status=404, text="Not found")
+
+        if not sub_path or sub_path.endswith(".html"):
+            _log_event_sync(conn, client_id, "preview_opened", page=file_path, extra=token)
+            conn.commit()
+
+        return web.FileResponse(full_path, headers={"X-Robots-Tag": "noindex, nofollow"})
+    finally:
+        conn.close()
+
+
+async def handle_preview_refresh(request):
+    token = request.match_info.get("token", "")
+    headers = _cors_headers(request)
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        preview_row, submission = _preview_row_and_submission(conn, token)
+        if not preview_row or not submission:
+            return web.json_response({"ok": False, "error": "not_found"}, status=404, headers=headers)
+
+        _, submission_id, tier, _, expires_at = preview_row
+        now = datetime.now(timezone.utc)
+        if now <= datetime.fromisoformat(expires_at):
+            return web.json_response({"ok": False, "error": "not_expired_yet"}, status=400, headers=headers)
+
+        total_previews = conn.execute(
+            "SELECT COUNT(*) FROM previews WHERE submission_id = ?", (submission_id,)
+        ).fetchone()[0]
+        if total_previews >= 2:
+            return web.json_response({"ok": False, "error": "refresh_limit_reached"}, status=403, headers=headers)
+
+        client_id = submission["client_id"] or ""
+        artist_name = submission["artist_name"] or ""
+        fields = _submission_row_to_fields(submission)
+    finally:
+        conn.close()
+
+    new_url = await generate_preview(submission_id, client_id, fields, is_refresh=True)
+    if not new_url:
+        return web.json_response({"ok": False, "error": "generation_failed"}, status=500, headers=headers)
+
+    conn2 = sqlite3.connect(DB_PATH)
+    try:
+        _log_event_sync(conn2, client_id, "preview_refresh_requested", extra=new_url)
+        conn2.commit()
+    finally:
+        conn2.close()
+
+    fire_and_forget(send_telegram_notification(
+        f"\U0001F504 Preview refreshed for <b>{html.escape(artist_name)}</b> - new 24h link is live."
+    ))
+
+    return web.json_response({"ok": True, "url": new_url}, headers=headers)
+
+
 async def handle_unsubscribe(request):
     token = request.query.get("token", "")
     if token:
@@ -1008,6 +1334,7 @@ async def handle_health(request):
 def main():
     init_db()
     os.makedirs(UPLOADS_DIR, exist_ok=True)
+    os.makedirs(PREVIEWS_DIR, exist_ok=True)
     app = web.Application(client_max_size=APP_MAX_BODY_BYTES)
     app.router.add_post("/subscribe", handle_subscribe)
     app.router.add_options("/subscribe", handle_options)
@@ -1018,6 +1345,10 @@ def main():
     app.router.add_post("/event", handle_event)
     app.router.add_options("/event", handle_options)
     app.router.add_get("/live-count", handle_live_count)
+    app.router.add_post("/preview/{token}/refresh", handle_preview_refresh)
+    app.router.add_options("/preview/{token}/refresh", handle_options)
+    app.router.add_get("/preview/{token}", handle_preview)
+    app.router.add_get("/preview/{token}/{path:.*}", handle_preview)
     # allow_head=False: a security scanner's HEAD request to preview this
     # link must not be able to trigger the unsubscribe itself.
     app.router.add_get("/unsubscribe", handle_unsubscribe, allow_head=False)

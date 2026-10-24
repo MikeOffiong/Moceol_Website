@@ -2,7 +2,9 @@
 // Handles the navbar, the shared footer, and data-driven rendering
 // (hero release info, music-page stream links, shop grid).
 
-var FOOTER_SOCIAL_LINKS = [
+// A generated preview page defines window.PREVIEW_FOOTER_SOCIAL_LINKS before
+// this file loads, so its artist's own links show instead of Moceol's.
+var FOOTER_SOCIAL_LINKS = window.PREVIEW_FOOTER_SOCIAL_LINKS || [
     { cls: "instagram", href: "https://instagram.com/moceol", icon: "fa-brands fa-instagram", label: "Instagram" },
     { cls: "tiktok", href: "https://www.tiktok.com/@moceol", icon: "fa-brands fa-tiktok", label: "TikTok" },
     { cls: "x-twitter", href: "https://x.com/moceol", icon: "fa-brands fa-x-twitter", label: "X" },
@@ -59,8 +61,9 @@ function renderFooter() {
     var iconsHtml = FOOTER_SOCIAL_LINKS.map(function (link) {
         return '<a class="' + link.cls + '" href="' + link.href + '" target="_blank" rel="noopener noreferrer" aria-label="' + link.label + '"><i class="' + link.icon + '"></i><span class="sr-only">' + link.label + '</span></a>';
     }).join("");
+    var copyrightName = window.PREVIEW_COPYRIGHT_NAME || "Moceol Entertainment";
     footer.innerHTML =
-        '<div class="footer-bottom"><p>copyright &copy;<span id="copyright-year">' + year + '</span> Moceol Entertainment. designed by <span class="designer">@moceol</span></p></div>' +
+        '<div class="footer-bottom"><p>copyright &copy;<span id="copyright-year">' + year + '</span> ' + copyrightName + '. designed by <span class="designer">@moceol</span></p></div>' +
         '<div class="social-icons">' + iconsHtml + '</div>';
 }
 
