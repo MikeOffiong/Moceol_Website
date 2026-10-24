@@ -1504,3 +1504,32 @@ a {
 .services-footer a {
     color: var(--color-amber);
 }
+
+.services-footer-label {
+    margin-bottom: 16px;
+}
+
+.services-footer-icons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+}
+
+.services-footer-icons a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1px solid var(--color-accent);
+    color: var(--color-accent);
+    font-size: 22px;
+    transition: 0.3s ease;
+}
+
+.services-footer-icons a:hover {
+    background: var(--color-accent);
+    color: var(--color-ink);
+}
