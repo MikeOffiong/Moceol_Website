@@ -5,7 +5,10 @@
 # redirect lines here aren't possible.
 /listen.html /listen 301
 
-# Clean routes: serve listen.html's content with a 200 (URL stays exactly as
-# typed — no .html, no query string, no song name or random code).
-/listen /listen.html 200
-/listen/* /listen.html 200
+# Numbered permanent links: rewrite to the extensionless /listen, NOT
+# /listen.html — Cloudflare Pages auto-redirects any .html destination back
+# to its clean-url form, which turned a rewrite straight to listen.html into
+# an infinite redirect loop. Bare /listen needs no rule of its own:
+# Cloudflare already auto-serves listen.html there, the same as every other
+# page (bio.html at /bio, etc.) with no _redirects entry at all.
+/listen/* /listen 200
