@@ -277,11 +277,19 @@ function initListenPage() {
     var pathMatch = window.location.pathname.match(/\/listen\/(\d+)\/?$/);
     var number = pathMatch ? parseInt(pathMatch[1], 10) : null;
 
-    var release = (number && releases.find(function (r) { return r.number === number; })) || null;
-
-    if (!release && slug) {
-        release = releases.find(function (r) { return r.slug === slug; }) || null;
+    // Old ?r=<slug> links (live in ads and bios, pre-dating numbered links) -
+    // Cloudflare Pages' _redirects can't match on query strings, so this
+    // page itself reads the old code and redirects to the permanent
+    // /listen/N link rather than rendering in place.
+    if (!number && slug) {
+        var oldLinkMatch = releases.find(function (r) { return r.slug === slug; });
+        if (oldLinkMatch && oldLinkMatch.number) {
+            window.location.replace("/listen/" + oldLinkMatch.number);
+            return;
+        }
     }
+
+    var release = (number && releases.find(function (r) { return r.number === number; })) || null;
 
     if (!release && trackParam) {
         release = {

@@ -1,27 +1,8 @@
-# Old listen.html?r=<slug> links are live in ads and bios — keep them working
-# forever by permanently redirecting to the new numbered clean link. Order
-# matters: these specific-query rules must stay above the bare-path rules
-# below, since a bare-path rule matches the path regardless of query string.
-/listen.html?r=clarity-of-mind /listen/17 301
-/listen.html?r=celebration /listen/16 301
-/listen.html?r=never-stop /listen/15 301
-/listen.html?r=got-you /listen/14 301
-/listen.html?r=can-t-deny /listen/13 301
-/listen.html?r=all-a-dream /listen/12 301
-/listen.html?r=into-you /listen/11 301
-/listen.html?r=hit-the-road /listen/10 301
-/listen.html?r=lavish /listen/9 301
-/listen.html?r=tuesday /listen/8 301
-/listen.html?r=top-of-my-throne /listen/7 301
-/listen.html?r=only-human /listen/6 301
-/listen.html?r=can-t-tell-me-nothing /listen/5 301
-/listen.html?r=okriks /listen/4 301
-/listen.html?r=it-pays /listen/3 301
-/listen.html?r=butterfly-effect /listen/1 301
-/listen.html?r=famous /listen/2 301
-
-# Bare listen.html with no query string (no longer used internally, but may
-# be bookmarked) -> bare clean link.
+# Old listen.html?r=<slug> links (live in ads and bios) are handled by a
+# small script in initListenPage() (script.js) that reads ?r= and redirects
+# to the permanent /listen/N link — Cloudflare Pages _redirects doesn't
+# match on query strings and allows only one rule per path, so per-slug
+# redirect lines here aren't possible.
 /listen.html /listen 301
 
 # Clean routes: serve listen.html's content with a 200 (URL stays exactly as
