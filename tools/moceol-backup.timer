@@ -1,9 +1,0 @@
-[Unit]
-Description=Run the Moceol DB backup daily
-
-[Timer]
-OnCalendar=*-*-* 03:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
