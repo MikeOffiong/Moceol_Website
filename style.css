@@ -1323,6 +1323,16 @@ a {
     flex-direction: column;
 }
 
+/* The [hidden] attribute is only a UA-stylesheet default (display: none),
+   which the flex rule above - an author rule - overrides regardless of
+   specificity. Without this, JS setting .hidden = true on these elements
+   has no visual effect at all. */
+#full-website-section[hidden],
+.form-subfields[hidden],
+.photo-upload-field[hidden] {
+    display: none;
+}
+
 .form-subfields {
     margin-top: 10px;
     padding-left: 2px;
