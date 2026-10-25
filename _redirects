@@ -12,10 +12,3 @@
 # Cloudflare already auto-serves listen.html there, the same as every other
 # page (bio.html at /bio, etc.) with no _redirects entry at all.
 /listen/* /listen 200
-
-# Block public access to backend source (tools/*.py, systemd units, etc.) -
-# this repo is deployed as-is with no build step, so anything committed here
-# is otherwise servable as a static file. None of these scripts hardcode
-# secrets (all read from the droplet's own env file), but the rate limits,
-# validation rules and DB schema in them have no business being public.
-/tools/* /404-blocked 404
