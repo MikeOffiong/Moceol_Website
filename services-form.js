@@ -261,6 +261,60 @@ function setRequired(ids, isRequired) {
     });
 }
 
+// Resets every Full Website-only answer to its blank state - called when
+// switching to Landing Page so stale answers (including whatever autosave
+// already wrote to localStorage) can never ride along with a Landing Page
+// submission. Doesn't touch already-uploaded photos on the server - just
+// the form/draft state, since switching back to Full Website a moment
+// later shouldn't force a re-upload.
+function clearFullWebsiteFields() {
+    var bio = document.getElementById("intake-bio");
+    if (bio) {
+        bio.value = "";
+    }
+
+    ["gumroad-own", "gumroad-setup", "gumroad-other", "support-yes", "support-no"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.checked = false;
+        }
+    });
+    ["intake-gumroad-handle", "intake-other-payment-link", "intake-support-link", "intake-support-text"].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.value = "";
+        }
+    });
+    var consent = document.getElementById("intake-photo-consent");
+    if (consent) {
+        consent.checked = false;
+    }
+
+    var handleField = document.getElementById("gumroad-handle-field");
+    var otherField = document.getElementById("other-payment-link-field");
+    var supportFields = document.getElementById("support-fields");
+    if (handleField) handleField.hidden = true;
+    if (otherField) otherField.hidden = true;
+    if (supportFields) supportFields.hidden = true;
+    setRequired(["intake-gumroad-handle", "intake-other-payment-link", "intake-support-link", "intake-support-text"], false);
+
+    portraitState.uploaded = false;
+    galleryState.count = 0;
+    var portraitThumb = document.getElementById("portrait-thumb");
+    var portraitDropzone = document.getElementById("portrait-dropzone");
+    var portraitWarning = document.getElementById("portrait-warning");
+    if (portraitThumb) portraitThumb.innerHTML = "";
+    if (portraitDropzone) portraitDropzone.textContent = "Tap to choose a photo";
+    if (portraitWarning) portraitWarning.hidden = true;
+
+    var galleryThumb = document.getElementById("gallery-thumb");
+    var galleryCount = document.getElementById("gallery-count");
+    var galleryWarning = document.getElementById("gallery-warning");
+    if (galleryThumb) galleryThumb.innerHTML = "";
+    if (galleryCount) galleryCount.textContent = "0 of " + MAX_GALLERY_PHOTOS + " added";
+    if (galleryWarning) galleryWarning.hidden = true;
+}
+
 function initTierToggle() {
     var landingRadio = document.getElementById("tier-landing");
     var fullRadio = document.getElementById("tier-full");
@@ -269,15 +323,25 @@ function initTierToggle() {
         return;
     }
 
-    function apply() {
+    // isUserEvent is false only for the one self-triggered call below, made
+    // during setup before autosave has restored anything yet - clearing and
+    // saving there would overwrite a real saved draft with blank data
+    // before restoreFormDraft() ever gets to read it. Every real "change"
+    // (a click, or restoreFormDraft() dispatching one for a restored
+    // selection) passes true.
+    function apply(isUserEvent) {
         var isFull = fullRadio.checked;
         fullSection.hidden = !isFull;
         setRequired(["intake-bio"], isFull);
+        if (!isFull && isUserEvent) {
+            clearFullWebsiteFields();
+            saveFormDraft();
+        }
     }
 
-    landingRadio.addEventListener("change", apply);
-    fullRadio.addEventListener("change", apply);
-    apply();
+    landingRadio.addEventListener("change", function () { apply(true); });
+    fullRadio.addEventListener("change", function () { apply(true); });
+    apply(false);
 }
 
 function initGumroadToggle() {
