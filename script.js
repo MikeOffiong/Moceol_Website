@@ -32,6 +32,46 @@ window.moceolTracking = {
 // on the droplet (systemd: moceol-subscribe.service), behind Caddy's HTTPS
 // reverse proxy. See initDropAlerts() near the bottom of this file.
 var ALERTS_SUBSCRIBE_URL = "https://api.moceol.com/subscribe";
+var EVENT_URL = "https://api.moceol.com/event";
+
+// A client's own preview/live site (window.MOCEOL_CLIENT_SUBMISSION_ID,
+// set by preview_builder.py) is the only place this fires a page_visit -
+// moceol.com's own content pages have never tracked visits (only
+// services.html's funnel does, via services-form.js's own fireFunnelEvent),
+// and this intentionally doesn't change that.
+function getSiteClientId() {
+    try {
+        var existing = localStorage.getItem("moceol_client_id");
+        if (existing) {
+            return existing;
+        }
+        var id = "c_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem("moceol_client_id", id);
+        return id;
+    } catch (e) {
+        return "c_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+    }
+}
+
+function fireClientSitePageVisit() {
+    if (!window.MOCEOL_CLIENT_SUBMISSION_ID) {
+        return;
+    }
+    try {
+        fetch(EVENT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                client_id: getSiteClientId(),
+                event_type: "page_visit",
+                page: window.location.pathname,
+                submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID
+            })
+        }).catch(function () {});
+    } catch (e) {
+        // Never let event logging break the page.
+    }
+}
 
 // Fires a tracking event, then follows the link. For same-tab links this
 // delays navigation briefly so the tracking request isn't cancelled by the
@@ -607,7 +647,8 @@ function handleAlertsSubmit(e) {
             first_name: firstName,
             last_name: lastName,
             source: alertsState.placement,
-            website: websiteInput.value
+            website: websiteInput.value,
+            submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID || null
         })
     })
         .then(function (resp) {
@@ -738,6 +779,7 @@ document.addEventListener("DOMContentLoaded", function () {
     initListenPage();
     initShopGrid();
     initDropAlerts();
+    fireClientSitePageVisit();
     if (typeof initServicesForm === "function") {
         initServicesForm();
     }
