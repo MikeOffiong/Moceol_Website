@@ -431,6 +431,12 @@ function initListenPage() {
         return;
     }
 
+    // The specific release this listen page is showing, read by the drop-
+    // alerts submit handler (below) so a bell signup from here records
+    // which release the fan was looking at. null everywhere else - there's
+    // no single release in view on the hero, music list, etc.
+    window.MOCEOL_CURRENT_RELEASE = release.slug || trackParam || null;
+
     if (bgEl) {
         if (release.coverUrl && !release.coverIsPlaceholder) {
             bgEl.style.backgroundImage =
@@ -722,7 +728,8 @@ function handleAlertsSubmit(e) {
             source: alertsState.placement,
             website: websiteInput.value,
             submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID || null,
-            campaign: getSiteCampaignTag()
+            campaign: getSiteCampaignTag(),
+            release: window.MOCEOL_CURRENT_RELEASE || null
         })
     })
         .then(function (resp) {
