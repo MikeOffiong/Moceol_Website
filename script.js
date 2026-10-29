@@ -53,6 +53,28 @@ function getSiteClientId() {
     }
 }
 
+// A tag (utm_campaign or the shorter camp) on whatever link a fan actually
+// arrived on - read once, then persisted in localStorage so it keeps
+// showing up on every later action in the same browser (a stream click,
+// an email signup) even once the URL itself no longer carries it. A new
+// tag on a later visit overwrites the old one (last-touch) - simplest
+// rule, and the one almost every campaign dashboard defaults to. Falls
+// back to whatever's already stored if the current URL has no tag.
+function getSiteCampaignTag() {
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var campaign = params.get("utm_campaign") || params.get("camp");
+        if (campaign) {
+            campaign = campaign.slice(0, 190);
+            localStorage.setItem("moceol_campaign_tag", campaign);
+            return campaign;
+        }
+        return localStorage.getItem("moceol_campaign_tag") || "";
+    } catch (e) {
+        return "";
+    }
+}
+
 function fireClientSitePageVisit() {
     if (!window.MOCEOL_CLIENT_SUBMISSION_ID) {
         return;
@@ -65,6 +87,7 @@ function fireClientSitePageVisit() {
                 client_id: getSiteClientId(),
                 event_type: "page_visit",
                 page: window.location.pathname,
+                traffic_source: guessSiteTrafficSource(),
                 submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID
             })
         }).catch(function () {});
@@ -73,19 +96,19 @@ function fireClientSitePageVisit() {
     }
 }
 
-// Tagged-link source for the current page view - a tag on whatever link a
-// fan actually arrived on, read fresh here. Campaign *persistence* (so a
-// tag set on the landing page still shows up on a stream click two pages
-// later) is a separate piece - this just reads what's on the URL/referrer
-// right now, which is already what Step 1 (stream clicks) needs.
+// Campaign tag (persisted, see getSiteCampaignTag) wins over a plain
+// utm_source, which wins over the referring site, which falls back to
+// "direct". Used for page_visit, stream_click, and (via its own campaign
+// field) /subscribe - the three places Step 2 asks to show campaign
+// performance for.
 function guessSiteTrafficSource() {
+    var campaign = getSiteCampaignTag();
+    if (campaign) {
+        return "campaign:" + campaign;
+    }
     try {
         var params = new URLSearchParams(window.location.search);
-        var campaign = params.get("utm_campaign") || params.get("camp");
         var source = params.get("utm_source");
-        if (campaign) {
-            return "campaign:" + campaign.slice(0, 190);
-        }
         if (source) {
             return source.slice(0, 200);
         }
@@ -698,7 +721,8 @@ function handleAlertsSubmit(e) {
             last_name: lastName,
             source: alertsState.placement,
             website: websiteInput.value,
-            submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID || null
+            submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID || null,
+            campaign: getSiteCampaignTag()
         })
     })
         .then(function (resp) {
