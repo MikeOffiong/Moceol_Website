@@ -73,6 +73,55 @@ function fireClientSitePageVisit() {
     }
 }
 
+// Tagged-link source for the current page view - a tag on whatever link a
+// fan actually arrived on, read fresh here. Campaign *persistence* (so a
+// tag set on the landing page still shows up on a stream click two pages
+// later) is a separate piece - this just reads what's on the URL/referrer
+// right now, which is already what Step 1 (stream clicks) needs.
+function guessSiteTrafficSource() {
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var campaign = params.get("utm_campaign") || params.get("camp");
+        var source = params.get("utm_source");
+        if (campaign) {
+            return "campaign:" + campaign.slice(0, 190);
+        }
+        if (source) {
+            return source.slice(0, 200);
+        }
+        if (document.referrer) {
+            return new URL(document.referrer).hostname.slice(0, 200);
+        }
+    } catch (e) {
+        // fall through to "direct"
+    }
+    return "direct";
+}
+
+// Fires once per click on a platform-grid link (script.js's own
+// renderPlatformGrid, below) - the only place "which streaming platform"
+// is actually known. Unconditional (unlike fireClientSitePageVisit) -
+// this is net-new tracking nothing relied on before, including on
+// moceol.com's own listen page, which gets the same dashboard.
+function fireStreamClickEvent(platform, release) {
+    try {
+        fetch(EVENT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                client_id: getSiteClientId(),
+                event_type: "stream_click",
+                page: window.location.pathname,
+                traffic_source: guessSiteTrafficSource(),
+                extra: JSON.stringify({ platform: platform, release: release }),
+                submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID || null
+            })
+        }).catch(function () {});
+    } catch (e) {
+        // Never let event logging break the page.
+    }
+}
+
 // Fires a tracking event, then follows the link. For same-tab links this
 // delays navigation briefly so the tracking request isn't cancelled by the
 // page unload; target="_blank" links aren't navigating this tab away at all,
@@ -422,6 +471,7 @@ function initListenPage() {
         row.addEventListener("click", function () {
             // Opens in a new tab, so this tab never unloads - no navigation-timing concern here.
             window.moceolTracking.fireEvent("ClickButton", { platform: key, release: release.slug || trackParam || "unknown" });
+            fireStreamClickEvent(key, release.slug || trackParam || "unknown");
         });
 
         grid.appendChild(row);
