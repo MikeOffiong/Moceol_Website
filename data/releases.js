@@ -1,6 +1,6 @@
 // Moceol — release catalogue.
 // Plain .js (not .json) so it loads with a <script> tag and works without a server.
-// Edited by hand, or automatically by tools/update-release.js.
+// Edited by hand, or automatically by tools/update-release.js / tools/release_bot.py.
 
 window.RELEASES = [
     {
@@ -22,7 +22,7 @@ window.RELEASES = [
             "amazonMusic": "https://music.amazon.com/tracks/B0HJP3LYM8"
         },
         "gumroadUrl": "https://moceol.gumroad.com/l/eyurqz",
-        "featured": true
+        "featured": false
     },
     {
         "slug": "celebration",
@@ -330,5 +330,26 @@ window.RELEASES = [
             "boomplay": "https://www.boomplay.com/songs/86383217"
         },
         "featured": false
+    },
+    {
+        "slug": "open-eyes",
+        "number": 18,
+        "title": "Open Eyes",
+        "coverUrl": "images/open-eyes-cover.jpg",
+        "coverIsPlaceholder": false,
+        "releaseDate": "2026-10-29",
+        "spotifyTrackUrl": "https://open.spotify.com/track/0gTHkLm665XM9WcUJID0sf",
+        "platforms": {
+            "spotify": "https://open.spotify.com/track/0gTHkLm665XM9WcUJID0sf",
+            "appleMusic": "https://music.apple.com/us/album/open-eyes/6820854499?i=6820854500",
+            "deezer": "https://www.deezer.com/track/4337680392",
+            "youtubeMusic": "https://music.youtube.com/watch?v=SS9PSHnYdIw&si=9coF2mujFLEP4IKA",
+            "tidal": "https://tidal.com/track/568476201/u",
+            "amazonMusic": "https://music.amazon.com/tracks/B0HMH36PJ7?marketplaceId=ATVPDKIKX0DER&musicTerritory=US&ref=dm_sh_9l6KGDyPtWDWxS2z3iiVdpJ7k",
+            "soundcloud": "https://soundcloud.com/moceol-music/open-eyes",
+            "audiomack": "https://audiomack.com/moceol/song/open-eyes",
+            "boomplay": "https://www.boomplay.com/songs/EQvkIfJM-RMRfmetP0rdsC8b?srModel=COPYLINK&srList=WEB&share_content=music&share_channel=copylink&share_platform=web"
+        },
+        "featured": true
     }
 ];
