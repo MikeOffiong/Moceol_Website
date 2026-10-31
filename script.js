@@ -34,11 +34,12 @@ window.moceolTracking = {
 var ALERTS_SUBSCRIBE_URL = "https://api.moceol.com/subscribe";
 var EVENT_URL = "https://api.moceol.com/event";
 
-// A client's own preview/live site (window.MOCEOL_CLIENT_SUBMISSION_ID,
-// set by preview_builder.py) is the only place this fires a page_visit -
-// moceol.com's own content pages have never tracked visits (only
-// services.html's funnel does, via services-form.js's own fireFunnelEvent),
-// and this intentionally doesn't change that.
+// Used both by a client's own preview/live site (window.
+// MOCEOL_CLIENT_SUBMISSION_ID, set by preview_builder.py) and by
+// moceol.com's own real content pages below (fireClientSitePageVisit) -
+// one persisted id per browser either way. services.html's own funnel
+// (visited/started/submitted) is a separate, B2B-leads-only thing, fired
+// by services-form.js's own fireFunnelEvent, never this.
 function getSiteClientId() {
     try {
         var existing = localStorage.getItem("moceol_client_id");
@@ -75,10 +76,18 @@ function getSiteCampaignTag() {
     }
 }
 
+// Fires on every page load of every real content page - a client's own
+// (submission_id set) and moceol.com's own (submission_id null, same as
+// services.html's funnel rows use for ITS different purpose - the
+// backend tells the two apart by page name, see _count_events_in_range/
+// _dashboard_rows in subscribe_service.py) - so "Visitors" on a
+// dashboard always means the same population that can generate the
+// clicks/signups shown next to it. Previously gated on
+// MOCEOL_CLIENT_SUBMISSION_ID being set, which meant moceol.com's own
+// pages (including a bare /listen link shared in ads/DMs) never counted
+// a single real visit while still recording every click on them -
+// confirmed live, not theoretical.
 function fireClientSitePageVisit() {
-    if (!window.MOCEOL_CLIENT_SUBMISSION_ID) {
-        return;
-    }
     try {
         fetch(EVENT_URL, {
             method: "POST",
@@ -88,7 +97,7 @@ function fireClientSitePageVisit() {
                 event_type: "page_visit",
                 page: window.location.pathname,
                 traffic_source: guessSiteTrafficSource(),
-                submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID
+                submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID || null
             })
         }).catch(function () {});
     } catch (e) {
