@@ -355,6 +355,17 @@ function initTrackStreamButtons() {
     var releases = getReleases();
 
     cards.forEach(function (card) {
+        // A card that already carries its own server-rendered
+        // .track-stream-btn (client sites' Spotify-only music page - see
+        // transform_music() in preview_builder.py, which links straight to
+        // Spotify rather than through this site's own /listen page) keeps
+        // that link as-is; this only ever adds one when none exists yet,
+        // so moceol.com's own cards (which never render one server-side)
+        // behave exactly as before.
+        if (card.querySelector(".track-stream-btn")) {
+            return;
+        }
+
         var trackId = card.getAttribute("data-track-id");
         var release = releases.find(function (r) {
             return getSpotifyTrackId(r.spotifyTrackUrl) === trackId;
