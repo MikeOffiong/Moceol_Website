@@ -97,6 +97,8 @@ function fireClientSitePageVisit() {
                 event_type: "page_visit",
                 page: window.location.pathname,
                 traffic_source: guessSiteTrafficSource(),
+                resolved_source: getSiteResolvedSource(),
+                traffic_medium: getSiteTrafficMedium(),
                 submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID || null
             })
         }).catch(function () {});
@@ -110,6 +112,13 @@ function fireClientSitePageVisit() {
 // "direct". Used for page_visit, stream_click, and (via its own campaign
 // field) /subscribe - the three places Step 2 asks to show campaign
 // performance for.
+//
+// This alone used to be the ONLY source signal recorded - the moment a
+// link carried a campaign tag, utm_source/the referrer were discarded
+// entirely, so a tagged TikTok ad and a tagged Facebook ad were
+// indistinguishable in the data (both just "campaign:<name>"). getSite
+// ResolvedSource() below now tracks the real platform independently,
+// alongside this, never instead of it.
 function guessSiteTrafficSource() {
     var campaign = getSiteCampaignTag();
     if (campaign) {
@@ -130,6 +139,82 @@ function guessSiteTrafficSource() {
     return "direct";
 }
 
+// Known-platform hostnames a referrer can show up as - kept short and
+// obviously extendable, never a reason to fail if a new one shows up
+// (falls through to the raw hostname, not a crash or "Unknown").
+var REFERRER_PLATFORM_HOSTS = [
+    [/tiktok\.com$/, "TikTok"],
+    [/(^|\.)facebook\.com$|^fb\.com$|^m\.facebook\.com$|^lm\.facebook\.com$/, "Facebook"],
+    [/instagram\.com$/, "Instagram"],
+    [/(^|\.)google\.[a-z.]+$/, "Google"],
+    [/^(x\.com|twitter\.com|t\.co)$/, "X"],
+    [/(youtube\.com|youtu\.be)$/, "YouTube"],
+    [/(wa\.me|whatsapp\.com)$/, "WhatsApp"],
+];
+
+var UTM_SOURCE_LABELS = {
+    tiktok: "TikTok", facebook: "Facebook", fb: "Facebook", instagram: "Instagram", ig: "Instagram",
+    google: "Google", x: "X", twitter: "X", youtube: "YouTube", yt: "YouTube",
+    whatsapp: "WhatsApp", wa: "WhatsApp", email: "Email", friend: "Friend share",
+};
+
+// The REAL platform a visit/click/signup came from, independent of
+// whatever campaign tag it also carries (see guessSiteTrafficSource) -
+// persisted the same way (localStorage, last-touch wins) so it survives
+// from the first click through to a later signup in the same browser.
+// Resolution order, never blank: utm_source (mapped to a clean name when
+// recognized, else shown as typed) -> a known platform's referrer
+// hostname -> "Direct" (no utm_source, no referrer - WhatsApp shares and
+// untagged bio links both look like this, since neither carries a
+// referrer) -> "Unknown" only if something here actually throws.
+function getSiteResolvedSource() {
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var utmSource = params.get("utm_source");
+        if (utmSource) {
+            var resolved = UTM_SOURCE_LABELS[utmSource.toLowerCase()] || utmSource.slice(0, 100);
+            localStorage.setItem("moceol_resolved_source", resolved);
+            return resolved;
+        }
+        if (document.referrer) {
+            var host = new URL(document.referrer).hostname;
+            for (var i = 0; i < REFERRER_PLATFORM_HOSTS.length; i++) {
+                if (REFERRER_PLATFORM_HOSTS[i][0].test(host)) {
+                    var platform = REFERRER_PLATFORM_HOSTS[i][1];
+                    localStorage.setItem("moceol_resolved_source", platform);
+                    return platform;
+                }
+            }
+            localStorage.setItem("moceol_resolved_source", host.slice(0, 100));
+            return host.slice(0, 100);
+        }
+        var stored = localStorage.getItem("moceol_resolved_source");
+        return stored || "Direct";
+    } catch (e) {
+        return "Unknown";
+    }
+}
+
+// utm_medium (bio, ad, share, post, ...) - same persistence convention
+// as the campaign tag and the resolved source above. "Unknown" (never
+// blank) when the link never carried one at all - most WhatsApp shares
+// and untagged bio links are "Direct" source with "Unknown" medium,
+// which is itself useful information, not a gap to hide.
+function getSiteTrafficMedium() {
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var medium = params.get("utm_medium");
+        if (medium) {
+            medium = medium.slice(0, 100);
+            localStorage.setItem("moceol_traffic_medium", medium);
+            return medium;
+        }
+        return localStorage.getItem("moceol_traffic_medium") || "Unknown";
+    } catch (e) {
+        return "Unknown";
+    }
+}
+
 // Fires once per click on a platform-grid link (script.js's own
 // renderPlatformGrid, below) - the only place "which streaming platform"
 // is actually known. Unconditional (unlike fireClientSitePageVisit) -
@@ -145,6 +230,8 @@ function fireStreamClickEvent(platform, release) {
                 event_type: "stream_click",
                 page: window.location.pathname,
                 traffic_source: guessSiteTrafficSource(),
+                resolved_source: getSiteResolvedSource(),
+                traffic_medium: getSiteTrafficMedium(),
                 extra: JSON.stringify({ platform: platform, release: release }),
                 submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID || null
             })
@@ -749,6 +836,8 @@ function handleAlertsSubmit(e) {
             website: websiteInput.value,
             submission_id: window.MOCEOL_CLIENT_SUBMISSION_ID || null,
             campaign: getSiteCampaignTag(),
+            resolved_source: getSiteResolvedSource(),
+            traffic_medium: getSiteTrafficMedium(),
             release: window.MOCEOL_CURRENT_RELEASE || null
         })
     })
